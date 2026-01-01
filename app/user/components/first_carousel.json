@@ -1,0 +1,62 @@
+[
+    {
+        "id": 1,
+        "title": "New & Notable",
+        "keywords": "The best songs of the week",
+        "icon": "https://via.placeholder.com/150"
+    },
+    {
+        "id": 2,
+        "title": "Top Charts",
+        "keywords": "The best songs of the week",
+        "icon": "https://via.placeholder.com/150"
+    },
+    {
+        "id": 3,    
+        "title": "Exclusive Only",
+        "keywords": "The best songs of the week",
+        "icon": "https://via.placeholder.com/150"
+    },
+    {
+        "id": 4,
+        "title": "Under $20",
+        "keywords": "The best songs of the week",
+        "icon": "https://via.placeholder.com/150"
+    },
+    {
+        "id": 5,
+        "title": "Free Beats",
+        "keywords": "The best songs of the week",
+        "icon": "https://via.placeholder.com/150"
+    },
+    {
+        "id": 6,
+        "title": "Beats",
+        "keywords": "The best songs of the week",
+        "icon": "https://via.placeholder.com/150"
+    },
+    {
+        "id": 7,
+        "title": "Beats w/Hook",
+        "keywords": "The best songs of the week",
+        "icon": "https://via.placeholder.com/150"
+    },
+    {
+        "id": 8,
+        "title": "Top Lines",
+        "keywords": "The best songs of the week",
+        "icon": "https://via.placeholder.com/150"
+    },
+    {
+        "id": 9,
+        "title": "For You",
+        "keywords": "The best songs of the week",
+        "icon": "https://via.placeholder.com/150"
+    },
+    {
+        "id": 10,
+        "title": "Top Lines",
+        "keywords": "The best songs of the week",
+        "icon": "https://via.placeholder.com/150"
+    }
+]
