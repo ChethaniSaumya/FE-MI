@@ -1,0 +1,48 @@
+[
+
+    {
+        "id": 2,
+        "name": "Genre",
+        "value": "hip-hop"
+    },
+    {
+        "id": 3,
+        "name": "Track Type",
+        "value": "rock"
+    },
+    {
+        "id": 4,
+        "name": "Price",
+        "value": "blues"
+    },
+    {
+        "id": 5,
+        "name": "Mood",
+        "value": "jazz"
+    },
+    {
+        "id": 6,
+        "name": "BPM",
+        "value": "classical"
+    },
+    {
+        "id": 7,
+        "name": "Instrument",
+        "value": "country"
+    },
+    {
+        "id": 8,
+        "name": "Key",
+        "value": "electronic"
+    },
+    {
+        "id": 9,
+        "name": "Duration",
+        "value": "folk"
+    },
+    {
+        "id": 10,
+        "name": "Release Date",
+        "value": "folk"
+    }
+]
