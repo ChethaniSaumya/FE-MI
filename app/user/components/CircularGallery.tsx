@@ -471,51 +471,51 @@ class App {
   ) {
     const defaultItems = [
       {
-        image: `https://cdn5.beatstars.com/eyJidWNrZXQiOiJwcm9kLWJ0cy10cmFjayIsImtleSI6InByb2QvdHJhY2svYXJ0d29yay9USzE3OTM2NTgzL2NvbXAtNi0wLTAwLTAwLTAwLS5qcGciLCJlZGl0cyI6eyJyZXNpemUiOnsiZml0IjoiZmlsbCIsIndpZHRoIjoyNDAsImhlaWdodCI6MjQwfSwidG9Gb3JtYXQiOiJ3ZWJwIn19?t=1709743464393`,
+        image: `https://bafybeiahptml4w2hl5mqflvvt3wnb7rcy3ykw5fk3kkhytj6ocguqjyq54.ipfs.w3s.link/1.jpg`,
         text: "",
       },
       {
-        image: `https://cdn5.beatstars.com/eyJidWNrZXQiOiJwcm9kLWJ0cy10cmFjayIsImtleSI6InByb2QvdHJhY2svYXJ0d29yay9USzIzNTM5NDA2L3Bob3RvLTIwMjUtMDgtMTctMTgtNDItNTEuanBnIiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImZpbGwiLCJ3aWR0aCI6MjQwLCJoZWlnaHQiOjI0MH0sInRvRm9ybWF0Ijoid2VicCJ9fQ==?t=1755481396561`,
+        image: `https://bafybeiahptml4w2hl5mqflvvt3wnb7rcy3ykw5fk3kkhytj6ocguqjyq54.ipfs.w3s.link/2.jpg`,
         text: "",
       },
       {
-        image: `https://cdn5.beatstars.com/eyJidWNrZXQiOiJwcm9kLWJ0cy10cmFjayIsImtleSI6InByb2QvdHJhY2svYXJ0d29yay9USzIxNTA3NTEyLzIwMjQtY292ZXIuanBnIiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImZpbGwiLCJ3aWR0aCI6MjQwLCJoZWlnaHQiOjI0MH0sInRvRm9ybWF0Ijoid2VicCJ9fQ==?t=1738330621858`,
+        image: `https://bafybeiahptml4w2hl5mqflvvt3wnb7rcy3ykw5fk3kkhytj6ocguqjyq54.ipfs.w3s.link/3.jpg`,
         text: "",
       },
       {
-        image: `https://cdn5.beatstars.com/eyJidWNrZXQiOiJwcm9kLWJ0cy10cmFjayIsImtleSI6InByb2QvdHJhY2svYXJ0d29yay9USzE1NDUzMDIzL25vdC1teS1mYXVsdC5qcGciLCJlZGl0cyI6eyJyZXNpemUiOnsiZml0IjoiZmlsbCIsIndpZHRoIjoyNDAsImhlaWdodCI6MjQwfSwidG9Gb3JtYXQiOiJ3ZWJwIn19?t=1687180699241`,
+        image: `https://bafybeiahptml4w2hl5mqflvvt3wnb7rcy3ykw5fk3kkhytj6ocguqjyq54.ipfs.w3s.link/4.jpg`,
         text: "",
       },
       {
-        image: `https://cdn5.beatstars.com/eyJidWNrZXQiOiJwcm9kLWJ0cy10cmFjayIsImtleSI6InByb2QvdHJhY2svYXJ0d29yay9USzIyMjAxODk5Ly0xLmpwZyIsImVkaXRzIjp7InJlc2l6ZSI6eyJmaXQiOiJmaWxsIiwid2lkdGgiOjI0MCwiaGVpZ2h0IjoyNDB9LCJ0b0Zvcm1hdCI6IndlYnAifX0=?t=1747064940077`,
+        image: `https://bafybeiahptml4w2hl5mqflvvt3wnb7rcy3ykw5fk3kkhytj6ocguqjyq54.ipfs.w3s.link/5.jpg`,
         text: "",
       },
       {
-        image: `https://cdn5.beatstars.com/eyJidWNrZXQiOiJwcm9kLWJ0cy10cmFjayIsImtleSI6InByb2QvdHJhY2svYXJ0d29yay9USzIzNTYxNTYxL2JldHN0cmFycy5qcGciLCJlZGl0cyI6eyJyZXNpemUiOnsiZml0IjoiZmlsbCIsIndpZHRoIjoyNDAsImhlaWdodCI6MjQwfSwidG9Gb3JtYXQiOiJ3ZWJwIn19?t=1755680021155`,
+        image: `https://bafybeiahptml4w2hl5mqflvvt3wnb7rcy3ykw5fk3kkhytj6ocguqjyq54.ipfs.w3s.link/6.jpg`,
         text: "",
       },
       {
-        image: `https://cdn5.beatstars.com/eyJidWNrZXQiOiJwcm9kLWJ0cy10cmFjayIsImtleSI6InByb2QvdHJhY2svYXJ0d29yay9USzIwMDExODU5L3N3aXNoLmpwZyIsImVkaXRzIjp7InJlc2l6ZSI6eyJmaXQiOiJmaWxsIiwid2lkdGgiOjI0MCwiaGVpZ2h0IjoyNDB9LCJ0b0Zvcm1hdCI6IndlYnAifX0=?t=1727270124485`,
+        image: `https://bafybeiahptml4w2hl5mqflvvt3wnb7rcy3ykw5fk3kkhytj6ocguqjyq54.ipfs.w3s.link/7.jpg`,
         text: "",
       },
       {
-        image: `https://cdn5.beatstars.com/eyJidWNrZXQiOiJwcm9kLWJ0cy10cmFjayIsImtleSI6InByb2QvdHJhY2svYXJ0d29yay9USzIzMzQ5ODk2L2NyYXp0LXlvdW5nLWZhbS5qcGciLCJlZGl0cyI6eyJyZXNpemUiOnsiZml0IjoiZmlsbCIsIndpZHRoIjoyNDAsImhlaWdodCI6MjQwfSwidG9Gb3JtYXQiOiJ3ZWJwIn19?t=1753731469997`,
+        image: `https://bafybeiahptml4w2hl5mqflvvt3wnb7rcy3ykw5fk3kkhytj6ocguqjyq54.ipfs.w3s.link/8.jpg`,
         text: "",
       },
       {
-        image: `https://cdn5.beatstars.com/eyJidWNrZXQiOiJwcm9kLWJ0cy10cmFjayIsImtleSI6InByb2QvdHJhY2svYXJ0d29yay9USzIzNDE3MjIxLzY1OUNEMjdFLTk5MjktNDkxMC1COTczLTkxMENGOUNEQzM2NS5qcGVnIiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImZpbGwiLCJ3aWR0aCI6MjQwLCJoZWlnaHQiOjI0MH0sInRvRm9ybWF0Ijoid2VicCJ9fQ==?t=1754341632`,
+        image: `https://bafybeiahptml4w2hl5mqflvvt3wnb7rcy3ykw5fk3kkhytj6ocguqjyq54.ipfs.w3s.link/9.jpg`,
         text: "",
       },
       {
-        image: `https://cdn5.beatstars.com/eyJidWNrZXQiOiJwcm9kLWJ0cy10cmFjayIsImtleSI6InByb2QvdHJhY2svYXJ0d29yay9USzE5MzQyNzM0L3VubmFtZWQtMTMtLnBuZyIsImVkaXRzIjp7InJlc2l6ZSI6eyJmaXQiOiJmaWxsIiwid2lkdGgiOjI0MCwiaGVpZ2h0IjoyNDB9LCJ0b0Zvcm1hdCI6IndlYnAifX0=?t=1751497608820`,
+        image: `https://bafybeiahptml4w2hl5mqflvvt3wnb7rcy3ykw5fk3kkhytj6ocguqjyq54.ipfs.w3s.link/10.jpg`,
         text: "",
       },
       {
-        image: `https://cdn5.beatstars.com/eyJidWNrZXQiOiJwcm9kLWJ0cy10cmFjayIsImtleSI6InByb2QvdHJhY2svYXJ0d29yay9USzIwNDQxMzM4L2Fub3RoZXJkYXlhbm90aGVyZG9sbGFyLmpwZyIsImVkaXRzIjp7InJlc2l6ZSI6eyJmaXQiOiJmaWxsIiwid2lkdGgiOjI0MCwiaGVpZ2h0IjoyNDB9LCJ0b0Zvcm1hdCI6IndlYnAifX0=?t=1730815507989`,
+        image: `https://bafybeiahptml4w2hl5mqflvvt3wnb7rcy3ykw5fk3kkhytj6ocguqjyq54.ipfs.w3s.link/11.jpg`,
         text: "",
       },
       {
-        image: `https://cdn5.beatstars.com/eyJidWNrZXQiOiJwcm9kLWJ0cy10cmFjayIsImtleSI6InByb2QvdHJhY2svYXJ0d29yay9USzExMDcwOTQ0L2Vhcmx5bW9ybmluZ3MuanBnIiwiZWRpdHMiOnsicmVzaXplIjp7ImZpdCI6ImZpbGwiLCJ3aWR0aCI6MjQwLCJoZWlnaHQiOjI0MH0sInRvRm9ybWF0Ijoid2VicCJ9fQ==?t=1656602976409`,
+        image: `https://bafybeiahptml4w2hl5mqflvvt3wnb7rcy3ykw5fk3kkhytj6ocguqjyq54.ipfs.w3s.link/12.jpg`,
         text: "",
       },
     ];

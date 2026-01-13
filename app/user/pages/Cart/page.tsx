@@ -1,120 +1,361 @@
-'use client';
+'use client'
+import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Navbar from '../../components/Navbar'
+import Footer from '../../components/Footer'
+import {
+  FaShoppingCart,
+  FaTrash,
+  FaCreditCard,
+  FaLock,
+  FaCheck,
+  FaMusic,
+  FaSpinner
+} from 'react-icons/fa'
 
-import React from 'react';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+interface CartItem {
+  id: string;
+  licenseType: string;
+  price: number;
+  track: {
+    id: string;
+    trackName: string;
+    trackImage: string;
+    trackPrice: number;
+    musician: string;
+    musicianProfilePicture: string;
+  };
+}
 
-const Cart = () => {
+interface CartData {
+  items: CartItem[];
+  itemCount: number;
+  subtotal: number;
+  platformFee: number;
+  total: number;
+}
+
+const LICENSE_INFO: Record<string, { name: string; color: string }> = {
+  personal: { name: 'Personal', color: 'bg-green-500/20 text-green-400' },
+  commercial: { name: 'Commercial', color: 'bg-[#7ED7FF]/20 text-[#7ED7FF]' },
+  exclusive: { name: 'Exclusive', color: 'bg-[#E100FF]/20 text-[#E100FF]' }
+};
+
+export default function Cart() {
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [cart, setCart] = useState<CartData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (!userData) {
+      router.push('/user/pages/SignIn');
+      return;
+    }
+    const parsedUser = JSON.parse(userData);
+    setUser(parsedUser);
+    fetchCart(parsedUser.id);
+  }, [router]);
+
+  const fetchCart = async (userId: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:3001/api/cart/${userId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setCart(data.cart);
+      }
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      setCart({ items: [], itemCount: 0, subtotal: 0, platformFee: 0, total: 0 });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveItem = async (itemId: string) => {
+    setRemovingId(itemId);
+    try {
+      const response = await fetch(`http://localhost:3001/api/cart/${itemId}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Refresh cart
+        if (user) fetchCart(user.id);
+      }
+    } catch (error) {
+      console.error('Error removing item:', error);
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const handleUpdateLicense = async (itemId: string, licenseType: string) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/cart/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ licenseType })
+      });
+
+      const data = await response.json();
+      if (data.success && user) {
+        fetchCart(user.id);
+      }
+    } catch (error) {
+      console.error('Error updating license:', error);
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (!user || !cart || cart.items.length === 0) return;
+
+    setProcessing(true);
+    try {
+      const items = cart.items.map(item => ({
+        trackId: item.track.id,
+        licenseType: item.licenseType
+      }));
+
+      const response = await fetch('http://localhost:3001/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          items
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+      } else {
+        alert(data.message || 'Checkout failed');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Checkout failed. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#081028]">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E100FF]"></div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0A0A0A] via-[#1A1A2E] to-[#16213E] text-white">
+    <div className="min-h-screen bg-[#081028]">
       <Navbar />
-      
-      {/* Background Effects */}
-      <div className='containerpaddin container mx-auto pt-34 sm:pt-28 md:pt-32 lg:pt-50 xl:pt-50'>
-        <div className="relative z-10 container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto text-center">
-            
-            {/* Under Construction Section */}
-            <div className="bg-black/30 backdrop-blur-sm rounded-2xl border border-white/20 p-8 md:p-12">
-              
-              {/* Construction Icon */}
-              <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-[#E100FF] to-[#7C3AED] rounded-full flex items-center justify-center">
-                <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 8.172V5L8 4z" />
-                </svg>
-              </div>
-              
-              {/* Main Heading */}
-              <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white via-[#E100FF] to-[#7C3AED] bg-clip-text text-transparent">
-                Under Construction
-              </h1>
-              
-              {/* Description */}
-              <p className="text-xl md:text-2xl text-gray-300 mb-8 leading-relaxed">
-                We're building something amazing for you!
-              </p>
-              
-              <p className="text-lg text-gray-400 mb-12 max-w-2xl mx-auto">
-                Our shopping cart feature is currently under development. We're working hard to bring you the best music shopping experience. Please check back soon!
-              </p>
-              
-              {/* Progress Bar */}
-              <div className="mb-12">
-                <div className="flex justify-between text-sm text-gray-400 mb-2">
-                  <span>Progress</span>
-                  <span>65%</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-[#E100FF] to-[#7C3AED] h-2 rounded-full transition-all duration-1000"
-                    style={{ width: '65%' }}
-                  ></div>
-                </div>
-              </div>
-              
-              {/* Features Coming Soon */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                <div className="bg-black/20 rounded-lg p-6 border border-white/10">
-                  <div className="w-12 h-12 mx-auto mb-4 bg-[#E100FF]/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-[#E100FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
-                    </svg>
-                  </div>
-                  <h3 className="font-semibold text-white mb-2">Smart Cart</h3>
-                  <p className="text-gray-400 text-sm">Intelligent cart management with recommendations</p>
-                </div>
-                
-                <div className="bg-black/20 rounded-lg p-6 border border-white/10">
-                  <div className="w-12 h-12 mx-auto mb-4 bg-[#E100FF]/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-[#E100FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                  <h3 className="font-semibold text-white mb-2">Secure Payment</h3>
-                  <p className="text-gray-400 text-sm">Multiple payment options with top security</p>
-                </div>
-                
-                <div className="bg-black/20 rounded-lg p-6 border border-white/10">
-                  <div className="w-12 h-12 mx-auto mb-4 bg-[#E100FF]/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-[#E100FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <h3 className="font-semibold text-white mb-2">Instant Access</h3>
-                  <p className="text-gray-400 text-sm">Immediate download after purchase</p>
-                </div>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <a 
-                  href="/user/pages/home" 
-                  className="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-[#E100FF] to-[#7C3AED] text-white rounded-lg hover:from-[#E100FF]/90 hover:to-[#7C3AED]/90 transition-all duration-300 font-semibold"
+
+      <div className="container mx-auto px-4 pt-24 pb-12">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center gap-3">
+            <FaShoppingCart className="text-[#E100FF]" />
+            Shopping Cart
+          </h1>
+          <p className="text-gray-400">
+            {cart?.itemCount || 0} {cart?.itemCount === 1 ? 'item' : 'items'} in your cart
+          </p>
+        </div>
+
+        {cart && cart.items.length > 0 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Cart Items */}
+            <div className="lg:col-span-2 space-y-4">
+              {cart.items.map(item => (
+                <div
+                  key={item.id}
+                  className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-xl border border-[#232B43] overflow-hidden"
                 >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
-                  Back to Home
-                </a>
-                
-                <a 
-                  href="/user/pages/topcharts" 
-                  className="inline-flex items-center justify-center px-8 py-4 bg-transparent border-2 border-white/20 text-white rounded-lg hover:bg-white/10 hover:border-white/40 transition-all duration-300 font-semibold"
+                  <div className="flex flex-col sm:flex-row">
+                    {/* Track Image */}
+                    <div className="sm:w-32 aspect-square sm:aspect-auto flex-shrink-0">
+                      <img
+                        src={item.track?.trackImage || '/default-track.jpg'}
+                        alt={item.track?.trackName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    {/* Item Info */}
+                    <div className="flex-1 p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                        <div className="flex-1">
+                          <h3
+                            className="text-lg font-semibold text-white mb-1 cursor-pointer hover:text-[#E100FF] transition-colors"
+                            onClick={() => router.push(`/user/pages/Track/${item.track?.id}`)}
+                          >
+                            {item.track?.trackName}
+                          </h3>
+                          <div className="flex items-center gap-2 mb-3">
+                            {item.track?.musicianProfilePicture && (
+                              <img
+                                src={item.track.musicianProfilePicture}
+                                alt=""
+                                className="w-5 h-5 rounded-full object-cover"
+                              />
+                            )}
+                            <span className="text-gray-400 text-sm">{item.track?.musician}</span>
+                          </div>
+
+                          {/* License Selector */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-gray-400 text-sm">License:</span>
+                            <select
+                              value={item.licenseType}
+                              onChange={(e) => handleUpdateLicense(item.id, e.target.value)}
+                              className="bg-[#0A1428] border border-[#232B43] rounded-lg px-3 py-1.5 text-white text-sm focus:border-[#E100FF] focus:outline-none"
+                            >
+                              <option value="personal">Personal (${(item.track?.trackPrice || 0).toFixed(2)})</option>
+                              <option value="commercial">Commercial (${((item.track?.trackPrice || 0) * 2.5).toFixed(2)})</option>
+                              <option value="exclusive">Exclusive (${((item.track?.trackPrice || 0) * 10).toFixed(2)})</option>
+                            </select>
+                            <span className={`px-2 py-0.5 rounded-full text-xs ${LICENSE_INFO[item.licenseType]?.color || ''}`}>
+                              {LICENSE_INFO[item.licenseType]?.name || item.licenseType}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Price & Remove */}
+                        <div className="flex sm:flex-col items-center sm:items-end gap-4">
+                          <p className="text-xl font-bold text-white">
+                            ${item.price?.toFixed(2)}
+                          </p>
+                          <button
+                            onClick={() => handleRemoveItem(item.id)}
+                            disabled={removingId === item.id}
+                            className="text-red-400 hover:text-red-300 transition-colors p-2"
+                          >
+                            {removingId === item.id ? (
+                              <FaSpinner className="animate-spin" />
+                            ) : (
+                              <FaTrash />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Continue Shopping */}
+              <button
+                onClick={() => router.push('/user/pages/Marketplace')}
+                className="text-[#E100FF] hover:underline text-sm"
+              >
+                ← Continue Shopping
+              </button>
+            </div>
+
+            {/* Order Summary */}
+            <div>
+              <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-xl border border-[#232B43] p-6 sticky top-24">
+                <h2 className="text-xl font-bold text-white mb-6">Order Summary</h2>
+
+                {/* Summary Lines */}
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between text-gray-400">
+                    <span>Subtotal ({cart.itemCount} items)</span>
+                    <span className="text-white">${cart.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-400">
+                    <span>Platform Fee (15%)</span>
+                    <span className="text-white">Included</span>
+                  </div>
+                  <div className="border-t border-[#232B43] pt-3">
+                    <div className="flex justify-between">
+                      <span className="text-white font-semibold">Total</span>
+                      <span className="text-2xl font-bold text-white">${cart.total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Checkout Button */}
+                <button
+                  onClick={handleCheckout}
+                  disabled={processing}
+                  className="w-full bg-gradient-to-r from-[#E100FF] to-[#7C3AED] text-white py-4 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                  </svg>
-                  Browse Music
-                </a>
+                  {processing ? (
+                    <>
+                      <FaSpinner className="animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <FaCreditCard />
+                      Proceed to Checkout
+                    </>
+                  )}
+                </button>
+
+                {/* Security Note */}
+                <div className="mt-4 flex items-center justify-center gap-2 text-gray-500 text-xs">
+                  <FaLock />
+                  <span>Secure checkout powered by APEXX</span>
+                </div>
+
+                {/* What You Get */}
+                <div className="mt-6 pt-6 border-t border-[#232B43]">
+                  <h3 className="text-white font-medium mb-3">What you'll get:</h3>
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2 text-gray-400 text-sm">
+                      <FaCheck className="text-green-400 text-xs" />
+                      Instant download access
+                    </li>
+                    <li className="flex items-center gap-2 text-gray-400 text-sm">
+                      <FaCheck className="text-green-400 text-xs" />
+                      License certificate
+                    </li>
+                    <li className="flex items-center gap-2 text-gray-400 text-sm">
+                      <FaCheck className="text-green-400 text-xs" />
+                      High-quality audio files
+                    </li>
+                    <li className="flex items-center gap-2 text-gray-400 text-sm">
+                      <FaCheck className="text-green-400 text-xs" />
+                      Lifetime access in library
+                    </li>
+                  </ul>
+                </div>
               </div>
-              
             </div>
           </div>
-        </div>
+        ) : (
+          /* Empty Cart */
+          <div className="text-center py-20 bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-2xl border border-[#232B43]">
+            <FaMusic className="text-gray-600 text-5xl mx-auto mb-4" />
+            <h3 className="text-white font-semibold text-xl mb-2">Your Cart is Empty</h3>
+            <p className="text-gray-400 mb-6">Discover amazing tracks and add them to your cart</p>
+            <button
+              onClick={() => router.push('/user/pages/Marketplace')}
+              className="bg-[#E100FF] hover:bg-[#E100FF]/80 text-white px-6 py-3 rounded-lg transition-colors"
+            >
+              Browse Marketplace
+            </button>
+          </div>
+        )}
       </div>
+
       <Footer />
     </div>
   );
-};
-
-export default Cart;
+}
