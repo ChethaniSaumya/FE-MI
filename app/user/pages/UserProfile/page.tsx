@@ -1,800 +1,770 @@
 'use client'
-import React, { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { profileAPI, imageAPI } from '../../../utils/api'
+import React, { useState, useEffect, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import { 
-  RiCameraLine, 
-  RiEditLine, 
-  RiSaveLine, 
-  RiUserLine, 
-  RiMapPinLine, 
-  RiFileTextLine,
-  RiLink,
-  RiFacebookBoxLine,
-  RiTwitterLine,
-  RiInstagramLine,
-  RiYoutubeLine,
-  RiLinkedinBoxLine,
-  RiGlobeLine,
-  RiArrowLeftLine
-} from 'react-icons/ri'
+    FaUser, FaEnvelope, FaMapMarkerAlt, FaGlobe, FaCamera, FaSpinner,
+    FaFacebook, FaTwitter, FaInstagram, FaYoutube, FaLinkedin, FaLink,
+    FaStripe, FaCheckCircle, FaExclamationCircle, FaExternalLinkAlt
+} from 'react-icons/fa'
+import { stripeConnectAPI } from '../../../utils/api'
+import axios from 'axios'
+
+const API_URL = 'http://localhost:3001';
+
+// Stripe Connect Section Component
+const StripeConnectSection = ({ userId, onStatusChange }: { userId: string; onStatusChange?: (status: any) => void }) => {
+    const [status, setStatus] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
+
+    useEffect(() => {
+        checkStripeStatus();
+    }, [userId]);
+
+    const checkStripeStatus = async () => {
+        try {
+            setLoading(true);
+            const response = await stripeConnectAPI.getStatus(userId);
+            setStatus(response);
+            if (onStatusChange) onStatusChange(response);
+        } catch (error) {
+            console.error('Error checking Stripe status:', error);
+            setStatus({ connected: false });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleConnectStripe = async () => {
+        try {
+            setActionLoading(true);
+            
+            if (!status?.connected) {
+                await stripeConnectAPI.createAccount(userId);
+            }
+            
+            const response = await stripeConnectAPI.getOnboardingLink(userId);
+            
+            if (response.success && response.url) {
+                window.location.href = response.url;
+            }
+        } catch (error) {
+            console.error('Error connecting Stripe:', error);
+            alert('Failed to connect Stripe. Please try again.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleOpenDashboard = async () => {
+        try {
+            setActionLoading(true);
+            const response = await stripeConnectAPI.getDashboardLink(userId);
+            
+            if (response.success && response.url) {
+                window.open(response.url, '_blank');
+            }
+        } catch (error) {
+            console.error('Error opening dashboard:', error);
+            alert('Failed to open Stripe dashboard.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                <div className="flex items-center justify-center py-8">
+                    <FaSpinner className="animate-spin text-2xl text-white" />
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+            <div className="flex items-center space-x-3 mb-4">
+                <FaStripe className="text-3xl text-[#635BFF]" />
+                <h2 className="text-xl font-semibold text-white">Stripe Payouts</h2>
+            </div>
+
+            {!status?.connected ? (
+                <div>
+                    <p className="text-gray-300 mb-4">
+                        Connect your Stripe account to receive payments directly when your tracks are sold.
+                    </p>
+                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-4">
+                        <div className="flex items-start space-x-2">
+                            <FaExclamationCircle className="text-yellow-400 mt-1 flex-shrink-0" />
+                            <p className="text-yellow-200 text-sm">
+                                You must connect a Stripe account before you can sell tracks. 
+                                Earnings will be automatically transferred to your bank account.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleConnectStripe}
+                        disabled={actionLoading}
+                        className="w-full py-3 px-4 bg-[#635BFF] hover:bg-[#5851ea] text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+                    >
+                        {actionLoading ? (
+                            <FaSpinner className="animate-spin" />
+                        ) : (
+                            <>
+                                <FaStripe className="text-xl" />
+                                <span>Connect with Stripe</span>
+                            </>
+                        )}
+                    </button>
+                </div>
+            ) : !status?.onboardingComplete ? (
+                <div>
+                    <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 mb-4">
+                        <div className="flex items-start space-x-2">
+                            <FaExclamationCircle className="text-orange-400 mt-1 flex-shrink-0" />
+                            <div>
+                                <p className="text-orange-200 font-medium">Onboarding Incomplete</p>
+                                <p className="text-orange-200/80 text-sm mt-1">
+                                    Please complete your Stripe account setup to start receiving payments.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleConnectStripe}
+                        disabled={actionLoading}
+                        className="w-full py-3 px-4 bg-[#635BFF] hover:bg-[#5851ea] text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+                    >
+                        {actionLoading ? (
+                            <FaSpinner className="animate-spin" />
+                        ) : (
+                            <span>Complete Setup</span>
+                        )}
+                    </button>
+                </div>
+            ) : !status?.payoutsEnabled ? (
+                <div>
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
+                        <div className="flex items-start space-x-2">
+                            <FaSpinner className="text-blue-400 mt-1 animate-spin flex-shrink-0" />
+                            <div>
+                                <p className="text-blue-200 font-medium">Verification Pending</p>
+                                <p className="text-blue-200/80 text-sm mt-1">
+                                    Stripe is reviewing your account. This usually takes 1-2 business days.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleOpenDashboard}
+                        disabled={actionLoading}
+                        className="w-full py-3 px-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+                    >
+                        {actionLoading ? <FaSpinner className="animate-spin" /> : <span>View Stripe Dashboard</span>}
+                    </button>
+                </div>
+            ) : (
+                <div>
+                    <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-4">
+                        <div className="flex items-start space-x-2">
+                            <FaCheckCircle className="text-green-400 mt-1 flex-shrink-0" />
+                            <div>
+                                <p className="text-green-200 font-medium">Payouts Enabled</p>
+                                <p className="text-green-200/80 text-sm mt-1">
+                                    Your Stripe account is fully set up. Earnings will be automatically transferred to your bank.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleOpenDashboard}
+                        disabled={actionLoading}
+                        className="w-full py-3 px-4 bg-[#635BFF] hover:bg-[#5851ea] text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+                    >
+                        {actionLoading ? (
+                            <FaSpinner className="animate-spin" />
+                        ) : (
+                            <>
+                                <span>Open Stripe Dashboard</span>
+                                <FaExternalLinkAlt className="text-sm" />
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
+
+            {/* Fee Structure Info */}
+            <div className="mt-6 pt-6 border-t border-white/20">
+                <h3 className="text-white font-medium mb-3">Fee Structure</h3>
+                <div className="space-y-2 text-sm">
+                    <div className="flex justify-between text-gray-300">
+                        <span>Platform Fee</span>
+                        <span>15%</span>
+                    </div>
+                    <div className="flex justify-between text-gray-300">
+                        <span>You Receive</span>
+                        <span className="text-green-400 font-medium">85%</span>
+                    </div>
+                </div>
+                <p className="text-gray-400 text-xs mt-3">
+                    Example: If you sell a track for $100, you receive $85 directly to your bank account.
+                </p>
+            </div>
+        </div>
+    );
+};
 
 function UserProfile() {
-  const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    displayName: '',
-    email: '',
-    location: '',
-    country: '',
-    biography: 'Music enthusiast and creator. Love exploring new sounds and connecting with fellow musicians.',
-    profilePicture: '',
-    socialLinks: {
-      facebook: '',
-      twitter: '',
-      instagram: '',
-      youtube: '',
-      linkedin: '',
-      website: ''
-    }
-  });
-
-  // Fetch user data from backend
-  const fetchUserData = async (userId: string) => {
-    try {
-      console.log('Fetching user data from backend for user:', userId);
-      console.log('User ID type:', typeof userId);
-      console.log('User ID length:', userId?.length);
-      console.log('Full URL:', `http://localhost:3001/api/users/${userId}`);
-      
-      const response = await fetch(`http://localhost:3001/api/users/${userId}`);
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-      
-      if (response.ok) {
-        const userData = await response.json();
-        console.log('Fetched user data from backend:', userData);
-        
-        if (userData.success && userData.user) {
-          const user = userData.user;
-          console.log('User profile picture from backend:', user.profilePicture);
-          console.log('User profile picture type:', typeof user.profilePicture);
-          console.log('User profile picture length:', user.profilePicture?.length);
-          
-          setFormData(prev => ({
-            ...prev,
-            firstName: user.firstName || '',
-            lastName: user.lastName || '',
-            displayName: user.displayName || (user.firstName?.toLowerCase() + user.lastName?.toLowerCase()) || '',
-            email: user.email || '',
-            location: user.location || '',
-            country: user.country || '',
-            biography: user.biography || 'Music enthusiast and creator. Love exploring new sounds and connecting with fellow musicians.',
-            profilePicture: user.profilePicture || '',
-            socialLinks: {
-              facebook: user.socialLinks?.facebook || '',
-              twitter: user.socialLinks?.twitter || '',
-              instagram: user.socialLinks?.instagram || '',
-              youtube: user.socialLinks?.youtube || '',
-              linkedin: user.socialLinks?.linkedin || '',
-              website: user.socialLinks?.website || ''
-            }
-          }));
-          
-          // Set profile image for display
-          if (user.profilePicture && user.profilePicture.trim() !== '') {
-            console.log('Setting profile image from backend:', user.profilePicture);
-            setProfileImage(user.profilePicture);
-          } else {
-            console.log('No profile picture found in backend data or empty string');
-            setProfileImage(null);
-          }
-          
-          // Initialize country search term with current country
-          if (user.country) {
-            setCountrySearchTerm(user.country);
-          }
-          
-                  // Update localStorage with fresh data
-        localStorage.setItem('user', JSON.stringify(user));
-        console.log('Updated localStorage with fresh data');
-        
-        // Dispatch custom event to notify navbar of profile update
-        window.dispatchEvent(new CustomEvent('userProfileUpdated'));
-        } else {
-          console.error('Invalid response format:', userData);
-          loadFromLocalStorage();
-        }
-      } else {
-        console.error('Failed to fetch user data from backend, status:', response.status);
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        
-        if (response.status === 404) {
-          console.log('User not found in database, using localStorage data');
-        }
-        
-        // Fallback to localStorage
-        loadFromLocalStorage();
-      }
-    } catch (error) {
-      console.error('Error fetching user data from backend:', error);
-      // Fallback to localStorage
-      loadFromLocalStorage();
-    }
-  };
-
-  // Load user data from localStorage (fallback)
-  const loadFromLocalStorage = () => {
-    console.log('Loading data from localStorage (fallback)');
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        console.log('User data from localStorage:', user);
-        console.log('Profile picture from localStorage:', user.profilePicture);
-        
-        setFormData(prev => ({
-          ...prev,
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
-          displayName: user.displayName || (user.firstName?.toLowerCase() + user.lastName?.toLowerCase()) || '',
-          email: user.email || '',
-          location: user.location || '',
-          country: user.country || '',
-          biography: user.biography || 'Music enthusiast and creator. Love exploring new sounds and connecting with fellow musicians.',
-          profilePicture: user.profilePicture || '',
-          socialLinks: {
-            facebook: user.socialLinks?.facebook || '',
-            twitter: user.socialLinks?.twitter || '',
-            instagram: user.socialLinks?.instagram || '',
-            youtube: user.socialLinks?.youtube || '',
-            linkedin: user.socialLinks?.linkedin || '',
-            website: user.socialLinks?.website || ''
-          }
-        }));
-        
-        // Set profile image for display
-        if (user.profilePicture) {
-          console.log('Setting profile image from localStorage:', user.profilePicture);
-          setProfileImage(user.profilePicture);
-        } else {
-          console.log('No profile picture found in localStorage');
-          setProfileImage(null);
-        }
-        // Initialize country search term with current country
-        if (user.country) {
-          setCountrySearchTerm(user.country);
-        }
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
-    } else {
-      console.log('No user data found in localStorage');
-    }
-  };
-
-  // Check URL parameters for edit mode
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const editMode = urlParams.get('edit') === 'true';
-    setIsEditing(editMode);
-  }, []);
-
-  // Load user data on component mount
-  useEffect(() => {
-    console.log('Component mounted, loading user data...');
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        console.log('Complete user data from localStorage:', user);
-        console.log('User ID from localStorage:', user.id);
-        console.log('User ID type:', typeof user.id);
-        console.log('User ID length:', user.id?.length);
-        
-        if (user.id) {
-          // Fetch fresh data from backend
-          console.log('Fetching fresh data from backend...');
-          fetchUserData(user.id);
-        } else {
-          // Fallback to localStorage if no user ID
-          console.log('No user ID found, using localStorage fallback');
-          loadFromLocalStorage();
-        }
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        loadFromLocalStorage();
-      }
-    } else {
-      console.log('No user data in localStorage');
-    }
-  }, []);
-
-  const countries = [
-    'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria',
-    'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan',
-    'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia',
-    'Cameroon', 'Canada', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo', 'Costa Rica',
-    'Croatia', 'Cuba', 'Cyprus', 'Czech Republic', 'Democratic Republic of the Congo', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador',
-    'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Fiji', 'Finland', 'France',
-    'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau',
-    'Guyana', 'Haiti', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland',
-    'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Kuwait', 'Kyrgyzstan',
-    'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Madagascar',
-    'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico', 'Micronesia',
-    'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal',
-    'Netherlands', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'North Macedonia', 'Norway', 'Oman', 'Pakistan',
-    'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Qatar',
-    'Romania', 'Russia', 'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia',
-    'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa',
-    'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria', 'Taiwan',
-    'Tajikistan', 'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan',
-    'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Vatican City',
-    'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe'
-  ];
-
-  // State for searchable country dropdown
-  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
-  const [countrySearchTerm, setCountrySearchTerm] = useState('');
-  const [filteredCountries, setFilteredCountries] = useState(countries);
-  const countryDropdownRef = useRef<HTMLDivElement>(null);
-
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setIsUploading(true);
-      
-      try {
-        console.log('Starting image upload for file:', file.name, file.size);
-        
-        // Upload image to GridFS
-        const uploadResponse = await imageAPI.uploadImage(file);
-        console.log('Upload response:', uploadResponse);
-        
-        if (uploadResponse.success) {
-          // Set the profile image URL for preview
-          const imageUrl = uploadResponse.imageUrl;
-          console.log('Setting profile image URL:', imageUrl);
-          
-          setProfileImage(imageUrl);
-          
-          // Update form data with the image URL
-          setFormData(prev => ({
-            ...prev,
-            profilePicture: imageUrl
-          }));
-          
-          console.log('Profile image uploaded successfully:', imageUrl);
-        } else {
-          console.error('Failed to upload image:', uploadResponse.message);
-          setSaveMessage({
-            type: 'error',
-            text: 'Failed to upload image. Please try again.'
-          });
-        }
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        setSaveMessage({
-          type: 'error',
-          text: 'Error uploading image. Please try again.'
-        });
-      } finally {
-        setIsUploading(false);
-      }
-    }
-  };
-
-  // Filter countries based on search term
-  useEffect(() => {
-    if (countrySearchTerm) {
-      const filtered = countries.filter(country =>
-        country.toLowerCase().includes(countrySearchTerm.toLowerCase())
-      );
-      setFilteredCountries(filtered);
-    } else {
-      setFilteredCountries(countries);
-    }
-  }, [countrySearchTerm]);
-
-  // Handle click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
-        setIsCountryDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...(prev[parent as keyof typeof prev] as any),
-          [child]: value
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  };
-
-  const handleCountrySelect = (country: string) => {
-    setFormData(prev => ({
-      ...prev,
-      country: country
-    }));
-    setCountrySearchTerm(country);
-    setIsCountryDropdownOpen(false);
-  };
-
-  const handleCountrySearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCountrySearchTerm(e.target.value);
-    setIsCountryDropdownOpen(true);
-  };
-
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    setSaveMessage(null);
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const fileInputRef = useRef<HTMLInputElement>(null);
     
-    try {
-      // Get current user data from localStorage
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        
-        // Save to backend
-        const profileData = {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          displayName: formData.displayName,
-          location: formData.location,
-          country: formData.country,
-          biography: formData.biography,
-          profilePicture: formData.profilePicture,
-          socialLinks: formData.socialLinks
-        };
-        
-        console.log('Saving profile data:', profileData);
-        console.log('Profile picture URL:', formData.profilePicture);
-        
-        const response = await profileAPI.updateProfile(user.id, profileData);
-        console.log('Profile update response:', response);
-        
-        if (response.success) {
-          // Update localStorage with new data
-          const updatedUser = {
-            ...user,
-            ...response.user
-          };
-          console.log('Updated user data:', updatedUser);
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-          
-          // Dispatch custom event to notify navbar of profile update
-          window.dispatchEvent(new CustomEvent('userProfileUpdated'));
-          
-          setSaveMessage({
-            type: 'success',
-            text: 'Profile updated successfully!'
-          });
-          
-          setIsEditing(false);
-          
-          // Clear success message after 3 seconds
-          setTimeout(() => {
-            setSaveMessage(null);
-          }, 3000);
+    const [user, setUser] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+    const [activeTab, setActiveTab] = useState('profile');
+
+    const [formData, setFormData] = useState({
+        firstName: '',
+        lastName: '',
+        displayName: '',
+        email: '',
+        location: '',
+        country: '',
+        biography: '',
+        profilePicture: '',
+        socialLinks: {
+            facebook: '',
+            twitter: '',
+            instagram: '',
+            youtube: '',
+            linkedin: '',
+            website: ''
         }
-      }
-    } catch (error: any) {
-      console.error('Error updating profile:', error);
-      setSaveMessage({
-        type: 'error',
-        text: error.response?.data?.message || 'Failed to update profile. Please try again.'
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    });
 
-  return (
-    <div className="min-h-screen ">
-        <Navbar />
+    // Check for Stripe redirect
+    useEffect(() => {
+        const stripeStatus = searchParams.get('stripe');
+        if (stripeStatus === 'success') {
+            setMessage({ type: 'success', text: 'Stripe account connected successfully!' });
+            setActiveTab('payments');
+        } else if (stripeStatus === 'refresh') {
+            setMessage({ type: 'error', text: 'Stripe setup was interrupted. Please try again.' });
+            setActiveTab('payments');
+        }
+    }, [searchParams]);
 
-      <div className="container mx-auto px-4 py-8 pt-34 sm:pt-28 md:pt-32 lg:pt-50 xl:pt-50">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => router.back()}
-                className="flex items-center space-x-2 text-white hover:text-blue-400 transition-colors"
-              >
-                <RiArrowLeftLine size={24} />
-                <span className="text-lg">Back</span>
-              </button>
-              <h1 className="text-3xl font-bold text-white">Profile Settings</h1>
-            </div>
-            <div className="flex items-center space-x-3">
-                
-                <button
-                  onClick={() => setIsEditing(!isEditing)}
-                disabled={isSaving}
-                className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {isEditing ? (
-                  <>
-                    <RiSaveLine size={20} />
-                    <span>Save Changes</span>
-                  </>
-                ) : (
-                  <>
-                    <RiEditLine size={20} />
-                    <span>Edit Profile</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+    // Load user data
+    useEffect(() => {
+        const userData = localStorage.getItem('user');
+        if (!userData) {
+            router.push('/user/pages/SignIn');
+            return;
+        }
+        
+        const userInfo = JSON.parse(userData);
+        setUser(userInfo);
+        fetchUserProfile(userInfo.id);
+    }, []);
 
-          {/* Save Message */}
-          {saveMessage && (
-            <div className={`p-4 rounded-lg mb-6 ${
-              saveMessage.type === 'success' 
-                ? 'bg-green-500/20 border border-green-500/30 text-green-400' 
-                : 'bg-red-500/20 border border-red-500/30 text-red-400'
-            }`}>
-              {saveMessage.text}
-            </div>
-          )}
-
-          {/* Profile Image Section */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-white/20">
-            <div className="flex flex-col md:flex-row items-center space-y-6 md:space-y-0 md:space-x-8">
-              {/* Profile Image */}
-              <div className="relative">
-                <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
-                  {(profileImage || formData.profilePicture) ? (
-                    <img 
-                      src={profileImage || formData.profilePicture} 
-                      alt="Profile" 
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        console.error('Image failed to load:', e);
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <RiUserLine size={48} className="text-white/50" />
-                  )}
-                </div>
-                
-                {isEditing && (
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full transition-colors"
-                    disabled={isUploading}
-                  >
-                    {isUploading ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    ) : (
-                      <RiCameraLine size={16} />
-                    )}
-                  </button>
-                )}
-                
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageUpload}
-                  accept="image/*"
-                  className="hidden"
-                />
-              </div>
-
-              {/* Profile Info */}
-              <div className="flex-1 text-center md:text-left">
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  {formData.firstName} {formData.lastName}
-                </h2>
-                <p className="text-gray-400 mb-4">@{formData.displayName}</p>
-                {formData.location && (
-                  <div className="flex items-center justify-center md:justify-start space-x-2 text-gray-400">
-                    <RiMapPinLine size={16} />
-                    <span>{formData.location}, {formData.country}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Form Sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Personal Information */}
-            <div className="bg-white/10 z-10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-              <h3 className="text-xl font-semibold text-white mb-6 flex items-center space-x-2">
-                <RiUserLine size={24} />
-                <span>Personal Information</span>
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">First Name</label>
-                    <input
-                      type="text"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      disabled={!isEditing}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Last Name</label>
-                    <input
-                      type="text"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      disabled={!isEditing}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Display Name</label>
-                  <input
-                    type="text"
-                    name="displayName"
-                    value={formData.displayName}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    disabled={true}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-lg text-gray-400 cursor-not-allowed"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Location</label>
-                    <input
-                      type="text"
-                      name="location"
-                      value={formData.location}
-                      onChange={handleInputChange}
-                      disabled={!isEditing}
-                      placeholder="City"
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Country</label>
-                    <div className="relative" ref={countryDropdownRef}>
-                      <input
-                        type="text"
-                        value={countrySearchTerm}
-                        onChange={handleCountrySearchChange}
-                        onFocus={() => setIsCountryDropdownOpen(true)}
-                        disabled={!isEditing}
-                        placeholder="Search for a country..."
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                      />
-                      
-                      {isCountryDropdownOpen && isEditing && (
-                        <div className="absolute bottom-full left-0 right-0 mb-2 bg-black/95 backdrop-blur-sm border border-white/20 rounded-lg shadow-lg z-[9999] max-h-48 overflow-y-auto">
-                          {filteredCountries.length > 0 ? (
-                            filteredCountries.map(country => (
-                              <button
-                                key={country}
-                                onClick={() => handleCountrySelect(country)}
-                                className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors text-white border-b border-white/20 last:border-b-0"
-                              >
-                                {country}
-                              </button>
-                            ))
-                          ) : (
-                            <div className="px-4 py-2 text-gray-400 text-sm">
-                              No countries found
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Biography */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-              <h3 className="text-xl font-semibold text-white mb-6 flex items-center space-x-2">
-                <RiFileTextLine size={24} />
-                <span>Biography</span>
-              </h3>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">About You</label>
-                <textarea
-                  name="biography"
-                  value={formData.biography}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  rows={8}
-                  placeholder="Tell us about yourself..."
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 resize-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Social Media Links */}
-          <div className="bg-white/10  backdrop-blur-sm rounded-2xl p-6 border border-white/20 mt-8">
-            <h3 className="text-xl font-semibold text-white mb-6 flex items-center space-x-2">
-              <RiLink size={24} />
-              <span>Social Media Links</span>
-            </h3>
+    const fetchUserProfile = async (userId: string) => {
+        try {
+            setLoading(true);
+            const response = await axios.get(`${API_URL}/api/users/${userId}`);
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                <div className="p-2 bg-primary/20 rounded-lg">
-                  <RiFacebookBoxLine size={24} className="text-primary" />
-                </div>
-                <input
-                  type="url"
-                  name="socialLinks.facebook"
-                  value={formData.socialLinks.facebook}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  placeholder="Facebook URL"
-                  className="flex-1 bg-transparent border-none text-white placeholder-gray-400 focus:outline-none disabled:opacity-50"
-                />
-              </div>
-              
-              <div className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                <div className="p-2 bg-primary/20 rounded-lg">
-                  <RiTwitterLine size={24} className="text-primary" />
-                </div>
-                <input
-                  type="url"
-                  name="socialLinks.twitter"
-                  value={formData.socialLinks.twitter}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  placeholder="Twitter URL"
-                  className="flex-1 bg-transparent border-none text-white placeholder-gray-400 focus:outline-none disabled:opacity-50"
-                />
-              </div>
-              
-              <div className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                <div className="p-2 bg-primary/20 rounded-lg">
-                  <RiInstagramLine size={24} className="text-primary" />
-                </div>
-                <input
-                  type="url"
-                  name="socialLinks.instagram"
-                  value={formData.socialLinks.instagram}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  placeholder="Instagram URL"
-                  className="flex-1 bg-transparent border-none text-white placeholder-gray-400 focus:outline-none disabled:opacity-50"
-                />
-              </div>
-              
-              <div className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                <div className="p-2 bg-primary/20 rounded-lg">
-                  <RiYoutubeLine size={24} className="text-primary" />
-                </div>
-                <input
-                  type="url"
-                  name="socialLinks.youtube"
-                  value={formData.socialLinks.youtube}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  placeholder="YouTube URL"
-                  className="flex-1 bg-transparent border-none text-white placeholder-gray-400 focus:outline-none disabled:opacity-50"
-                />
-              </div>
-              
-              <div className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                <div className="p-2 bg-primary/20 rounded-lg">
-                  <RiLinkedinBoxLine size={24} className="text-primary" />
-                </div>
-                <input
-                  type="url"
-                  name="socialLinks.linkedin"
-                  value={formData.socialLinks.linkedin}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  placeholder="LinkedIn URL"
-                  className="flex-1 bg-transparent border-none text-white placeholder-gray-400 focus:outline-none disabled:opacity-50"
-                />
-              </div>
-              
-              <div className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                <div className="p-2 bg-primary/20 rounded-lg">
-                  <RiGlobeLine size={24} className="text-primary" />
-                </div>
-                <input
-                  type="url"
-                  name="socialLinks.website"
-                  value={formData.socialLinks.website}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  placeholder="Website URL"
-                  className="flex-1 bg-transparent border-none text-white placeholder-gray-400 focus:outline-none disabled:opacity-50"
-                />
-              </div>
-            </div>
-          </div>
+            if (response.data.success) {
+                const userData = response.data.user;
+                setFormData({
+                    firstName: userData.firstName || '',
+                    lastName: userData.lastName || '',
+                    displayName: userData.displayName || '',
+                    email: userData.email || '',
+                    location: userData.location || '',
+                    country: userData.country || '',
+                    biography: userData.biography || '',
+                    profilePicture: userData.profilePicture || '',
+                    socialLinks: userData.socialLinks || {
+                        facebook: '',
+                        twitter: '',
+                        instagram: '',
+                        youtube: '',
+                        linkedin: '',
+                        website: ''
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+            setMessage({ type: 'error', text: 'Failed to load profile data' });
+        } finally {
+            setLoading(false);
+        }
+    };
 
-          {/* Save Button */}
-          {isEditing && (
-            <div className="mt-8 text-center">
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className={`px-8 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2 mx-auto ${
-                  isSaving 
-                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed' 
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                {isSaving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <>
-                    <RiSaveLine size={20} />
-                    <span>Save Profile</span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-        </div>
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        
+        if (name.startsWith('social_')) {
+            const socialKey = name.replace('social_', '');
+            setFormData(prev => ({
+                ...prev,
+                socialLinks: {
+                    ...prev.socialLinks,
+                    [socialKey]: value
+                }
+            }));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                [name]: value
+            }));
+        }
+    };
 
-        <Footer />
-    </div>
-  )
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            setMessage({ type: 'error', text: 'Please upload a valid image file' });
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            setMessage({ type: 'error', text: 'Image must be less than 5MB' });
+            return;
+        }
+
+        try {
+            setUploadingImage(true);
+            const uploadData = new FormData();
+            uploadData.append('image', file);
+
+            const response = await axios.post(`${API_URL}/api/upload-image`, uploadData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            if (response.data.success) {
+                setFormData(prev => ({
+                    ...prev,
+                    profilePicture: response.data.imageUrl
+                }));
+                setMessage({ type: 'success', text: 'Profile picture uploaded!' });
+            }
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            setMessage({ type: 'error', text: 'Failed to upload image' });
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        if (!user) return;
+
+        try {
+            setSaving(true);
+            setMessage(null);
+
+            const response = await axios.put(`${API_URL}/api/profile/${user.id}`, formData);
+
+            if (response.data.success) {
+                // Update localStorage
+                const updatedUser = { ...user, ...response.data.user };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                setUser(updatedUser);
+                
+                // Dispatch event to update Navbar
+                window.dispatchEvent(new Event('userProfileUpdated'));
+                
+                setMessage({ type: 'success', text: 'Profile updated successfully!' });
+            }
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            setMessage({ type: 'error', text: 'Failed to update profile' });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const countries = [
+        'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 
+        'France', 'Japan', 'South Korea', 'Brazil', 'India', 'Other'
+    ];
+
+    if (loading) {
+        return (
+            <div className="min-h-screen">
+                <Navbar />
+                <div className="container mx-auto px-4 py-8 pt-32">
+                    <div className="flex items-center justify-center py-20">
+                        <FaSpinner className="animate-spin text-4xl text-white" />
+                    </div>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen">
+            <Navbar />
+            
+            <div className="container mx-auto px-4 py-8 pt-32">
+                <div className="max-w-4xl mx-auto">
+                    {/* Header */}
+                    <div className="mb-6">
+                        <h1 className="text-3xl font-bold text-white">Account Settings</h1>
+                        <p className="text-gray-400 mt-1">Manage your profile and payment settings</p>
+                    </div>
+
+                    {/* Message */}
+                    {message && (
+                        <div className={`p-4 rounded-lg mb-6 ${
+                            message.type === 'success' 
+                                ? 'bg-green-500/20 border border-green-500/30 text-green-400' 
+                                : 'bg-red-500/20 border border-red-500/30 text-red-400'
+                        }`}>
+                            {message.text}
+                        </div>
+                    )}
+
+                    {/* Tabs */}
+                    <div className="flex space-x-4 mb-6 border-b border-white/20">
+                        <button
+                            onClick={() => setActiveTab('profile')}
+                            className={`pb-3 px-2 font-medium transition-colors ${
+                                activeTab === 'profile'
+                                    ? 'text-[#E100FF] border-b-2 border-[#E100FF]'
+                                    : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            Profile
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('payments')}
+                            className={`pb-3 px-2 font-medium transition-colors flex items-center space-x-2 ${
+                                activeTab === 'payments'
+                                    ? 'text-[#E100FF] border-b-2 border-[#E100FF]'
+                                    : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            <FaStripe />
+                            <span>Payments</span>
+                        </button>
+                    </div>
+
+                    {/* Profile Tab */}
+                    {activeTab === 'profile' && (
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            {/* Profile Picture Section */}
+                            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                                <h2 className="text-xl font-semibold text-white mb-4">Profile Picture</h2>
+                                <div className="flex items-center space-x-6">
+                                    <div className="relative">
+                                        <div className="w-24 h-24 rounded-full bg-gray-700 overflow-hidden">
+                                            {formData.profilePicture ? (
+                                                <img 
+                                                    src={formData.profilePicture} 
+                                                    alt="Profile" 
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <FaUser className="text-gray-400 text-3xl" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={uploadingImage}
+                                            className="absolute bottom-0 right-0 w-8 h-8 bg-[#E100FF] rounded-full flex items-center justify-center hover:bg-[#c000dd] transition-colors"
+                                        >
+                                            {uploadingImage ? (
+                                                <FaSpinner className="animate-spin text-white text-sm" />
+                                            ) : (
+                                                <FaCamera className="text-white text-sm" />
+                                            )}
+                                        </button>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            className="hidden"
+                                        />
+                                    </div>
+                                    <div>
+                                        <p className="text-white font-medium">Upload a new photo</p>
+                                        <p className="text-gray-400 text-sm">JPG, PNG. Max 5MB.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Basic Info Section */}
+                            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                                <h2 className="text-xl font-semibold text-white mb-4">Basic Information</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-white mb-1">
+                                            First Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="firstName"
+                                            value={formData.firstName}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E100FF]"
+                                            placeholder="John"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-white mb-1">
+                                            Last Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="lastName"
+                                            value={formData.lastName}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E100FF]"
+                                            placeholder="Doe"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-white mb-1">
+                                            Display Name / Username
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="displayName"
+                                            value={formData.displayName}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E100FF]"
+                                            placeholder="johndoe_beats"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-white mb-1">
+                                            Email
+                                        </label>
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={handleInputChange}
+                                            disabled
+                                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 cursor-not-allowed"
+                                        />
+                                        <p className="text-gray-500 text-xs mt-1">Email cannot be changed</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-white mb-1">
+                                            Location / City
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="location"
+                                            value={formData.location}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E100FF]"
+                                            placeholder="Los Angeles"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-white mb-1">
+                                            Country
+                                        </label>
+                                        <select
+                                            name="country"
+                                            value={formData.country}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#E100FF]"
+                                        >
+                                            <option value="">Select country</option>
+                                            {countries.map(country => (
+                                                <option key={country} value={country}>{country}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="mt-4">
+                                    <label className="block text-sm font-medium text-white mb-1">
+                                        Biography
+                                    </label>
+                                    <textarea
+                                        name="biography"
+                                        value={formData.biography}
+                                        onChange={handleInputChange}
+                                        rows={4}
+                                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E100FF]"
+                                        placeholder="Tell us about yourself..."
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Social Links Section */}
+                            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                                <h2 className="text-xl font-semibold text-white mb-4">Social Links</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-white mb-1 flex items-center">
+                                            <FaFacebook className="mr-2 text-blue-500" /> Facebook
+                                        </label>
+                                        <input
+                                            type="url"
+                                            name="social_facebook"
+                                            value={formData.socialLinks.facebook}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E100FF]"
+                                            placeholder="https://facebook.com/username"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-white mb-1 flex items-center">
+                                            <FaTwitter className="mr-2 text-sky-500" /> Twitter / X
+                                        </label>
+                                        <input
+                                            type="url"
+                                            name="social_twitter"
+                                            value={formData.socialLinks.twitter}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E100FF]"
+                                            placeholder="https://twitter.com/username"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-white mb-1 flex items-center">
+                                            <FaInstagram className="mr-2 text-pink-500" /> Instagram
+                                        </label>
+                                        <input
+                                            type="url"
+                                            name="social_instagram"
+                                            value={formData.socialLinks.instagram}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E100FF]"
+                                            placeholder="https://instagram.com/username"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-white mb-1 flex items-center">
+                                            <FaYoutube className="mr-2 text-red-500" /> YouTube
+                                        </label>
+                                        <input
+                                            type="url"
+                                            name="social_youtube"
+                                            value={formData.socialLinks.youtube}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E100FF]"
+                                            placeholder="https://youtube.com/@channel"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-white mb-1 flex items-center">
+                                            <FaLinkedin className="mr-2 text-blue-600" /> LinkedIn
+                                        </label>
+                                        <input
+                                            type="url"
+                                            name="social_linkedin"
+                                            value={formData.socialLinks.linkedin}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E100FF]"
+                                            placeholder="https://linkedin.com/in/username"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-white mb-1 flex items-center">
+                                            <FaLink className="mr-2 text-gray-400" /> Website
+                                        </label>
+                                        <input
+                                            type="url"
+                                            name="social_website"
+                                            value={formData.socialLinks.website}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E100FF]"
+                                            placeholder="https://yourwebsite.com"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Save Button */}
+                            <button
+                                type="submit"
+                                disabled={saving}
+                                className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+                                    saving
+                                        ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                                        : 'bg-[#E100FF] text-white hover:bg-[#c000dd]'
+                                }`}
+                            >
+                                {saving ? (
+                                    <span className="flex items-center justify-center">
+                                        <FaSpinner className="animate-spin mr-2" />
+                                        Saving...
+                                    </span>
+                                ) : (
+                                    'Save Changes'
+                                )}
+                            </button>
+                        </form>
+                    )}
+
+                    {/* Payments Tab */}
+                    {activeTab === 'payments' && user && (
+                        <div className="space-y-6">
+                            <StripeConnectSection userId={user.id} />
+                            
+                            {/* Additional Payment Info */}
+                            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                                <h2 className="text-xl font-semibold text-white mb-4">How Payments Work</h2>
+                                <div className="space-y-4 text-gray-300">
+                                    <div className="flex items-start space-x-3">
+                                        <div className="w-8 h-8 rounded-full bg-[#E100FF]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <span className="text-[#E100FF] font-bold text-sm">1</span>
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-white">Connect Stripe</p>
+                                            <p className="text-sm text-gray-400">Link your bank account through Stripe's secure onboarding process.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start space-x-3">
+                                        <div className="w-8 h-8 rounded-full bg-[#E100FF]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <span className="text-[#E100FF] font-bold text-sm">2</span>
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-white">Sell Your Tracks</p>
+                                            <p className="text-sm text-gray-400">Upload and list your tracks on the marketplace.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start space-x-3">
+                                        <div className="w-8 h-8 rounded-full bg-[#E100FF]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <span className="text-[#E100FF] font-bold text-sm">3</span>
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-white">Get Paid Automatically</p>
+                                            <p className="text-sm text-gray-400">When someone buys your track, 85% is automatically transferred to your bank account within 2-7 business days.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <Footer />
+        </div>
+    );
 }
 
-export default UserProfile
+export default UserProfile;

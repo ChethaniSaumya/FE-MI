@@ -124,9 +124,9 @@ function SignIn() {
           // Store user data in localStorage (in production, store JWT token)
           localStorage.setItem('user', JSON.stringify(response.user));
           
-          // Redirect to home page after successful login
+          // Redirect to dashboard page after successful login
           setTimeout(() => {
-            window.location.href = '/user/pages/home';
+            window.location.href = '/user/pages/CreatorDashboard';
           }, 1500);
         }
       } catch (error: any) {

@@ -184,7 +184,7 @@ function Navbar() {
                     <div className="max-w-screen-xl flex items-center justify-between mx-auto p-1">
 
                         <a href="/user/pages/home" className="flex items-center space-x-3 rtl:space-x-reverse">
-                            <img src={logo.src} className="h-6 sm:h-8 md:h-7 lg:h-8" alt="Flowbite Logo" />
+                            <img src={logo.src} className="h-8 min-w-[100px] object-contain" alt="Museedle Logo" />
                         </a>
 
 
@@ -281,7 +281,7 @@ function Navbar() {
                                         >
                                             <RiArrowDropDownLine className="text-white text-lg" />
                                         </button>
-                                        <span>Welcome, <span className="text-primary font-bold">{user.firstName}</span>!</span>
+                                        <span className="hidden lg:inline">Welcome, <span className="text-primary font-bold">{user.firstName}</span>!</span>
                                         
                                         {activeDropdown === 'welcome-profile' && (
                                             <div className="absolute top-full right-0 mt-2 w-80 bg-black/95 backdrop-blur-sm rounded-lg border border-white/20 shadow-lg z-100001 max-h-[80vh] overflow-hidden">
@@ -426,7 +426,7 @@ function Navbar() {
                                             ) : (
                                                 <CgProfile className="text-white text-xl" />
                                             )}
-                                            <span>Welcome, <span className="text-primary font-bold">{user.firstName}</span>!</span>
+                                            <span className="hidden lg:inline">Welcome, <span className="text-primary font-bold">{user.firstName}</span>!</span>
                                         </div>
                                         <div className="flex items-center justify-center space-x-4">
                                             <a 

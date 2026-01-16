@@ -2,6 +2,8 @@ import axios from 'axios';
 
 //const API_BASE_URL = 'https://ai-music-backend-73mf.onrender.com/api';
  const API_BASE_URL = 'http://localhost:3001/api';
+ const API_URL ='http://localhost:3001';
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -594,6 +596,30 @@ export const downloadAPI = {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
+};
+
+// Stripe Connect APIs
+// Stripe Connect APIs
+export const stripeConnectAPI = {
+    createAccount: async (userId: string) => {
+        const response = await axios.post(`${API_URL}/api/stripe/connect/create`, { userId });
+        return response.data;
+    },
+
+    getOnboardingLink: async (userId: string) => {
+        const response = await axios.post(`${API_URL}/api/stripe/connect/onboarding`, { userId });
+        return response.data;
+    },
+
+    getStatus: async (userId: string) => {
+        const response = await axios.get(`${API_URL}/api/stripe/connect/status/${userId}`);
+        return response.data;
+    },
+
+    getDashboardLink: async (userId: string) => {
+        const response = await axios.post(`${API_URL}/api/stripe/connect/dashboard`, { userId });
+        return response.data;
+    }
 };
 
 export default api;
