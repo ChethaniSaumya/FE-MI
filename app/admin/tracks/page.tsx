@@ -244,7 +244,7 @@ export default function TracksPage() {
     // If it's a GridFS file ID, construct the URL (similar to image API)
     if (trackFile.length === 24) { // MongoDB ObjectId length
       // Assuming there's a similar API for audio files
-      return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/audio/${trackFile}`;
+      return `http://localhost:3001/api/audio/${trackFile}`;
     }
     
     return trackFile;
