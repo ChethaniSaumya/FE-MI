@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
+import toast from '../../../components/Toast'
 import { 
   FaPlay, 
   FaPause, 
@@ -106,16 +107,36 @@ export default function TrackDetail() {
   const [duration, setDuration] = useState(0);
   const [user, setUser] = useState<any>(null);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [isInCart, setIsInCart] = useState(false); // NEW: Track if item is in cart
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
-    if (userData) setUser(JSON.parse(userData));
+    if (userData) {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      // Check if track is already in cart
+      checkIfInCart(parsedUser.id);
+    }
     
     if (trackId) {
       fetchTrackDetails();
       fetchLicenseTypes();
     }
   }, [trackId]);
+
+  // NEW: Check if track is already in user's cart
+  const checkIfInCart = async (userId: string) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/cart/${userId}`);
+      const data = await response.json();
+      if (data.success && data.cart?.items) {
+        const inCart = data.cart.items.some((item: any) => item.track?.id === trackId);
+        setIsInCart(inCart);
+      }
+    } catch (error) {
+      console.error('Error checking cart:', error);
+    }
+  };
 
   const fetchTrackDetails = async () => {
     try {
@@ -222,6 +243,12 @@ export default function TrackDetail() {
       return;
     }
 
+    // Don't add if already in cart
+    if (isInCart) {
+      toast.info('This track is already in your cart');
+      return;
+    }
+
     setAddingToCart(true);
     try {
       const response = await fetch('http://localhost:3001/api/cart', {
@@ -236,13 +263,14 @@ export default function TrackDetail() {
       
       const data = await response.json();
       if (data.success) {
-        alert('Added to cart!');
+        setIsInCart(true); // Mark as in cart
+        toast.success('Added to cart!');
       } else {
-        alert(data.message || 'Failed to add to cart');
+        toast.error(data.message || 'Failed to add to cart');
       }
     } catch (error) {
       console.error('Add to cart error:', error);
-      alert('Failed to add to cart');
+      toast.error('Failed to add to cart');
     } finally {
       setAddingToCart(false);
     }
@@ -254,8 +282,10 @@ export default function TrackDetail() {
       return;
     }
     
-    // Add to cart first, then go to cart
-    await handleAddToCart();
+    // Add to cart first (if not already), then go to cart
+    if (!isInCart) {
+      await handleAddToCart();
+    }
     router.push('/user/pages/Cart');
   };
 
@@ -318,104 +348,99 @@ export default function TrackDetail() {
                     className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/50 transition-colors"
                   >
                     <div className="w-20 h-20 rounded-full bg-[#E100FF] flex items-center justify-center">
-                      {isPlaying ? <FaPause size={30} /> : <FaPlay size={30} className="ml-1" />}
+                      {isPlaying ? <FaPause size={28} className="text-white" /> : <FaPlay size={28} className="text-white ml-2" />}
                     </div>
                   </button>
                 </div>
 
                 {/* Track Info */}
                 <div className="flex-1 p-6">
-                  <h1 className="text-3xl font-bold text-white mb-2">{track.trackName}</h1>
+                  <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">{track.trackName}</h1>
                   
-                  {/* Artist */}
                   <div className="flex items-center gap-3 mb-4">
-                    {track.musicianProfilePicture ? (
+                    {track.musicianProfilePicture && (
                       <img src={track.musicianProfilePicture} alt="" className="w-10 h-10 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-[#232B43] flex items-center justify-center">
-                        <FaUser className="text-gray-400" />
-                      </div>
                     )}
                     <div>
-                      <p className="text-white font-medium">{track.musician}</p>
                       <p className="text-gray-400 text-sm">Creator</p>
+                      <p className="text-white font-medium">{track.musician}</p>
                     </div>
                   </div>
 
-                  {/* Track Details */}
+                  {/* Track Meta */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                     {track.bpm && (
-                      <div className="bg-black/30 rounded-lg p-3">
-                        <p className="text-gray-400 text-xs mb-1">BPM</p>
+                      <div className="bg-[#0A1428] rounded-lg p-3">
+                        <p className="text-gray-500 text-xs">BPM</p>
                         <p className="text-white font-semibold">{track.bpm}</p>
                       </div>
                     )}
                     {track.trackKey && (
-                      <div className="bg-black/30 rounded-lg p-3">
-                        <p className="text-gray-400 text-xs mb-1">Key</p>
+                      <div className="bg-[#0A1428] rounded-lg p-3">
+                        <p className="text-gray-500 text-xs">Key</p>
                         <p className="text-white font-semibold">{track.trackKey}</p>
                       </div>
                     )}
                     {track.moodType && (
-                      <div className="bg-black/30 rounded-lg p-3">
-                        <p className="text-gray-400 text-xs mb-1">Mood</p>
+                      <div className="bg-[#0A1428] rounded-lg p-3">
+                        <p className="text-gray-500 text-xs">Mood</p>
                         <p className="text-white font-semibold">{track.moodType}</p>
                       </div>
                     )}
                     {track.trackType && (
-                      <div className="bg-black/30 rounded-lg p-3">
-                        <p className="text-gray-400 text-xs mb-1">Type</p>
+                      <div className="bg-[#0A1428] rounded-lg p-3">
+                        <p className="text-gray-500 text-xs">Type</p>
                         <p className="text-white font-semibold">{track.trackType}</p>
                       </div>
                     )}
                   </div>
 
                   {/* Stats */}
-                  <div className="flex items-center gap-6 text-gray-400 text-sm">
+                  <div className="flex items-center gap-6 text-sm text-gray-400">
                     <span className="flex items-center gap-1">
-                      <FaPlay className="text-xs" /> {track.playCount || 0} plays
+                      <FaPlay size={12} /> {track.playCount || 0} plays
                     </span>
                     <span className="flex items-center gap-1">
-                      <FaShoppingCart className="text-xs" /> {track.salesCount || 0} sales
+                      <FaShoppingCart size={12} /> {track.salesCount || 0} sales
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Audio Player */}
+              {/* Audio Progress Bar */}
               <div className="px-6 pb-6">
                 <div className="flex items-center gap-4">
                   <span className="text-gray-400 text-sm w-12">{formatTime(currentTime)}</span>
                   <input
                     type="range"
-                    min="0"
+                    min={0}
                     max={duration || 100}
                     value={currentTime}
                     onChange={handleSeek}
-                    className="flex-1 h-2 bg-[#232B43] rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-[#E100FF] [&::-webkit-slider-thumb]:rounded-full"
+                    className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#E100FF]"
                   />
                   <span className="text-gray-400 text-sm w-12">{formatTime(duration)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Description */}
+            {/* About Section */}
             {track.about && (
-              <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-2xl p-6 border border-[#232B43] mb-6">
+              <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-2xl p-6 border border-[#232B43]">
                 <h2 className="text-xl font-bold text-white mb-4">About This Track</h2>
                 <p className="text-gray-300 leading-relaxed">{track.about}</p>
               </div>
             )}
           </div>
 
-          {/* Right Column - Purchase */}
-          <div>
+          {/* Right Column - Purchase Options */}
+          <div className="lg:col-span-1">
             <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-2xl p-6 border border-[#232B43] sticky top-24">
               <h2 className="text-xl font-bold text-white mb-6">Choose License</h2>
 
               {/* License Options */}
               <div className="space-y-3 mb-6">
-                {licenses.map(license => {
+                {licenses.map((license) => {
                   const price = getPrice(license.name);
                   const isSelected = selectedLicense === license.name;
                   
@@ -423,7 +448,7 @@ export default function TrackDetail() {
                     <button
                       key={license.id}
                       onClick={() => setSelectedLicense(license.name)}
-                      className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                         isSelected 
                           ? 'border-[#E100FF] bg-[#E100FF]/10' 
                           : 'border-[#232B43] hover:border-[#E100FF]/50'
@@ -431,14 +456,12 @@ export default function TrackDetail() {
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-white font-semibold">{license.displayName}</span>
-                        <span className={`text-xl font-bold ${isSelected ? 'text-[#E100FF]' : 'text-white'}`}>
-                          ${price.toFixed(2)}
-                        </span>
+                        <span className="text-[#E100FF] font-bold">${price.toFixed(2)}</span>
                       </div>
-                      <p className="text-gray-400 text-sm">{license.description}</p>
+                      <p className="text-gray-400 text-sm mb-3">{license.description}</p>
                       
-                      {/* License Features */}
-                      <div className="mt-3 space-y-1">
+                      {/* Rights */}
+                      <div className="space-y-1">
                         <div className="flex items-center gap-2 text-xs">
                           <FaCheck className={license.rights?.commercialUse ? 'text-green-400' : 'text-gray-600'} />
                           <span className={license.rights?.commercialUse ? 'text-gray-300' : 'text-gray-500'}>
@@ -483,24 +506,37 @@ export default function TrackDetail() {
                 </button>
                 <button
                   onClick={handleAddToCart}
-                  disabled={addingToCart}
-                  className="w-full bg-[#232B43] hover:bg-[#232B43]/80 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                  disabled={addingToCart || isInCart}
+                  className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors ${
+                    isInCart 
+                      ? 'bg-green-600/20 text-green-400 border border-green-500/30 cursor-not-allowed' 
+                      : 'bg-[#232B43] hover:bg-[#232B43]/80 text-white disabled:opacity-50'
+                  }`}
                 >
-                  <FaShoppingCart />
-                  {addingToCart ? 'Adding...' : 'Add to Cart'}
+                  {isInCart ? (
+                    <>
+                      <FaCheck />
+                      Added to Cart
+                    </>
+                  ) : addingToCart ? (
+                    'Adding...'
+                  ) : (
+                    <>
+                      <FaShoppingCart />
+                      Add to Cart
+                    </>
+                  )}
                 </button>
               </div>
 
-              {/* Share */}
-              <div className="mt-6 pt-6 border-t border-[#232B43]">
-                <div className="flex items-center justify-center gap-4">
-                  <button className="p-3 bg-[#232B43] rounded-lg text-gray-400 hover:text-white transition-colors">
-                    <FaHeart />
-                  </button>
-                  <button className="p-3 bg-[#232B43] rounded-lg text-gray-400 hover:text-white transition-colors">
-                    <FaShare />
-                  </button>
-                </div>
+              {/* Additional Actions */}
+              <div className="flex items-center justify-center gap-4 mt-6 pt-4 border-t border-[#232B43]">
+                <button className="p-3 bg-[#232B43] hover:bg-[#232B43]/80 rounded-lg text-gray-400 hover:text-white transition-colors">
+                  <FaHeart />
+                </button>
+                <button className="p-3 bg-[#232B43] hover:bg-[#232B43]/80 rounded-lg text-gray-400 hover:text-white transition-colors">
+                  <FaShare />
+                </button>
               </div>
             </div>
           </div>

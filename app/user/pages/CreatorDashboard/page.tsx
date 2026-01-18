@@ -12,10 +12,9 @@ import {
   FaUpload,
   FaList,
   FaShoppingCart,
-  FaClock,
   FaCheckCircle,
-  FaArrowUp,
-  FaArrowRight
+  FaArrowRight,
+  FaStripe
 } from 'react-icons/fa'
 import { MdTrendingUp } from 'react-icons/md'
 
@@ -25,8 +24,6 @@ interface CreatorStats {
   totalViews: number;
   totalPlays: number;
   totalEarnings: number;
-  availableBalance: number;
-  pendingBalance: number;
   recentSales: any[];
 }
 
@@ -70,8 +67,6 @@ export default function CreatorDashboard() {
         totalViews: 0,
         totalPlays: 0,
         totalEarnings: 0,
-        availableBalance: 0,
-        pendingBalance: 0,
         recentSales: []
       });
     } finally {
@@ -190,55 +185,65 @@ export default function CreatorDashboard() {
           />
         </div>
 
-        {/* Earnings Section */}
+        {/* Earnings Section - UPDATED: Removed 7-day hold messaging */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
           <div className="lg:col-span-2 bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-2xl p-6 border border-[#232B43]">
             <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
               <FaDollarSign className="text-[#E100FF]" />
               Earnings Overview
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-black/30 rounded-xl p-4">
-                <p className="text-gray-400 text-sm mb-1">Total Earnings</p>
-                <p className="text-3xl font-bold text-white">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-black/30 rounded-xl p-5">
+                <p className="text-gray-400 text-sm mb-2">Total Earnings</p>
+                <p className="text-4xl font-bold text-white">
                   ${stats?.totalEarnings?.toFixed(2) || '0.00'}
                 </p>
-              </div>
-              <div className="bg-black/30 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <FaCheckCircle className="text-green-400 text-sm" />
-                  <p className="text-gray-400 text-sm">Available</p>
-                </div>
-                <p className="text-3xl font-bold text-green-400">
-                  ${stats?.availableBalance?.toFixed(2) || '0.00'}
+                <p className="text-gray-500 text-xs mt-2">
+                  From {stats?.totalSales || 0} sales
                 </p>
               </div>
-              <div className="bg-black/30 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <FaClock className="text-yellow-400 text-sm" />
-                  <p className="text-gray-400 text-sm">Pending</p>
+              <div className="bg-black/30 rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <FaCheckCircle className="text-green-400 text-sm" />
+                  <p className="text-gray-400 text-sm">Transferred to Stripe</p>
                 </div>
-                <p className="text-3xl font-bold text-yellow-400">
-                  ${stats?.pendingBalance?.toFixed(2) || '0.00'}
+                <p className="text-4xl font-bold text-green-400">
+                  ${stats?.totalEarnings?.toFixed(2) || '0.00'}
+                </p>
+                <p className="text-gray-500 text-xs mt-2">
+                  Instant payouts via Stripe Connect
                 </p>
               </div>
             </div>
-            <p className="text-gray-500 text-xs mt-4">
-              * Earnings become available 7 days after purchase
-            </p>
+            
+            {/* Stripe Connect Info */}
+            <div className="mt-4 p-3 bg-[#635BFF]/10 border border-[#635BFF]/30 rounded-lg flex items-center gap-3">
+              <FaStripe className="text-[#635BFF] text-2xl" />
+              <div>
+                <p className="text-white text-sm font-medium">Instant Transfers via Stripe Connect</p>
+                <p className="text-gray-400 text-xs">
+                  Your earnings are transferred to your Stripe account immediately after each sale.
+                  Payout timing depends on your Stripe account settings.
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Quick Stats */}
+          {/* Platform Stats */}
           <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-2xl p-6 border border-[#232B43]">
-            <h2 className="text-xl font-bold text-white mb-4">Platform Stats</h2>
+            <h2 className="text-xl font-bold text-white mb-4">Fee Structure</h2>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">Platform Fee</span>
                 <span className="text-white font-semibold">15%</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">Your Share</span>
-                <span className="text-green-400 font-semibold">85%</span>
+                <span className="text-gray-400">Stripe Fee</span>
+                <span className="text-white font-semibold">~2.9% + $0.30</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">You Receive</span>
+                <span className="text-green-400 font-semibold">~82%</span>
               </div>
               <div className="border-t border-[#232B43] my-4"></div>
               <div className="flex items-center justify-between">
@@ -304,8 +309,9 @@ export default function CreatorDashboard() {
                     <th className="text-left text-gray-400 text-sm font-medium py-3 px-4">Track</th>
                     <th className="text-left text-gray-400 text-sm font-medium py-3 px-4">Buyer</th>
                     <th className="text-left text-gray-400 text-sm font-medium py-3 px-4">License</th>
-                    <th className="text-right text-gray-400 text-sm font-medium py-3 px-4">Amount</th>
+                    <th className="text-right text-gray-400 text-sm font-medium py-3 px-4">You Earned</th>
                     <th className="text-right text-gray-400 text-sm font-medium py-3 px-4">Date</th>
+                    <th className="text-center text-gray-400 text-sm font-medium py-3 px-4">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -340,6 +346,12 @@ export default function CreatorDashboard() {
                       </td>
                       <td className="py-3 px-4 text-right text-gray-400 text-sm">
                         {new Date(sale.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400 flex items-center justify-center gap-1">
+                          <FaCheckCircle className="text-xs" />
+                          Transferred
+                        </span>
                       </td>
                     </tr>
                   ))}

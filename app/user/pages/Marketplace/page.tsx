@@ -3,16 +3,17 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import toast from '../../components/Toast'
 import { 
   FaSearch, 
   FaFilter, 
   FaPlay, 
   FaPause, 
   FaShoppingCart, 
-  FaHeart,
   FaMusic,
   FaSortAmountDown,
-  FaTimes
+  FaTimes,
+  FaCheck
 } from 'react-icons/fa'
 import { genreAPI } from '../../../utils/api'
 
@@ -59,11 +60,15 @@ export default function Marketplace() {
   // User state
   const [user, setUser] = useState<any>(null);
   const [cartCount, setCartCount] = useState(0);
+  const [cartItems, setCartItems] = useState<string[]>([]); // Track IDs in cart
+  const [addingToCartId, setAddingToCartId] = useState<string | null>(null); // Track being added
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
-      setUser(JSON.parse(userData));
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      fetchCartItems(parsedUser.id); // Fetch cart items to know which tracks are in cart
     }
     fetchGenres();
     fetchTracks();
@@ -72,6 +77,21 @@ export default function Marketplace() {
   useEffect(() => {
     fetchTracks();
   }, [currentPage, sortBy, selectedGenre]);
+
+  // Fetch cart items to track which tracks are already in cart
+  const fetchCartItems = async (userId: string) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/cart/${userId}`);
+      const data = await response.json();
+      if (data.success && data.cart?.items) {
+        const trackIds = data.cart.items.map((item: any) => item.track?.id).filter(Boolean);
+        setCartItems(trackIds);
+        setCartCount(data.cart.itemCount || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+    }
+  };
 
   const fetchGenres = async () => {
     try {
@@ -153,6 +173,14 @@ export default function Marketplace() {
       return;
     }
 
+    // Check if already in cart
+    if (cartItems.includes(track.id)) {
+      toast.info('This track is already in your cart');
+      return;
+    }
+
+    setAddingToCartId(track.id);
+
     try {
       const response = await fetch('http://localhost:3001/api/cart', {
         method: 'POST',
@@ -167,13 +195,16 @@ export default function Marketplace() {
       const data = await response.json();
       if (data.success) {
         setCartCount(prev => prev + 1);
-        alert('Added to cart!');
+        setCartItems(prev => [...prev, track.id]); // Add to cart items
+        toast.success('Added to cart!');
       } else {
-        alert(data.message || 'Failed to add to cart');
+        toast.error(data.message || 'Failed to add to cart');
       }
     } catch (error) {
       console.error('Add to cart error:', error);
-      alert('Failed to add to cart');
+      toast.error('Failed to add to cart');
+    } finally {
+      setAddingToCartId(null);
     }
   };
 
@@ -189,67 +220,85 @@ export default function Marketplace() {
     setCurrentPage(1);
   };
 
-  const TrackCard = ({ track }: { track: Track }) => (
-    <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-xl overflow-hidden border border-[#232B43] hover:border-[#E100FF]/50 transition-all duration-300 group">
-      {/* Image */}
-      <div className="relative aspect-square overflow-hidden cursor-pointer" onClick={() => handleTrackClick(track.id)}>
-        <img 
-          src={track.trackImage || '/default-track.jpg'} 
-          alt={track.trackName}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-        />
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <button
-            onClick={(e) => { e.stopPropagation(); handlePlayPause(track); }}
-            className="w-14 h-14 rounded-full bg-[#E100FF] flex items-center justify-center text-white hover:scale-110 transition-transform"
+  const TrackCard = ({ track }: { track: Track }) => {
+    const isInCart = cartItems.includes(track.id);
+    const isAdding = addingToCartId === track.id;
+
+    return (
+      <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-xl overflow-hidden border border-[#232B43] hover:border-[#E100FF]/50 transition-all duration-300 group">
+        {/* Image */}
+        <div className="relative aspect-square overflow-hidden cursor-pointer" onClick={() => handleTrackClick(track.id)}>
+          <img 
+            src={track.trackImage || '/default-track.jpg'} 
+            alt={track.trackName}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          />
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <button
+              onClick={(e) => { e.stopPropagation(); handlePlayPause(track); }}
+              className="w-14 h-14 rounded-full bg-[#E100FF] flex items-center justify-center text-white hover:scale-110 transition-transform"
+            >
+              {currentPlayingId === track.id && isPlaying ? <FaPause size={20} /> : <FaPlay size={20} className="ml-1" />}
+            </button>
+          </div>
+          {/* Price Tag */}
+          <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm px-3 py-1 rounded-full">
+            <span className="text-white font-bold">${track.trackPrice}</span>
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="p-4">
+          <h3 
+            className="text-white font-semibold text-lg mb-1 truncate cursor-pointer hover:text-[#E100FF] transition-colors"
+            onClick={() => handleTrackClick(track.id)}
           >
-            {currentPlayingId === track.id && isPlaying ? <FaPause size={20} /> : <FaPlay size={20} className="ml-1" />}
-          </button>
-        </div>
-        {/* Price Tag */}
-        <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm px-3 py-1 rounded-full">
-          <span className="text-white font-bold">${track.trackPrice}</span>
-        </div>
-      </div>
+            {track.trackName}
+          </h3>
+          <div className="flex items-center gap-2 mb-3">
+            {track.musicianProfilePicture && (
+              <img src={track.musicianProfilePicture} alt="" className="w-6 h-6 rounded-full object-cover" />
+            )}
+            <span className="text-gray-400 text-sm truncate">{track.musician}</span>
+          </div>
 
-      {/* Info */}
-      <div className="p-4">
-        <h3 
-          className="text-white font-semibold text-lg mb-1 truncate cursor-pointer hover:text-[#E100FF] transition-colors"
-          onClick={() => handleTrackClick(track.id)}
-        >
-          {track.trackName}
-        </h3>
-        <div className="flex items-center gap-2 mb-3">
-          {track.musicianProfilePicture && (
-            <img src={track.musicianProfilePicture} alt="" className="w-6 h-6 rounded-full object-cover" />
-          )}
-          <span className="text-gray-400 text-sm truncate">{track.musician}</span>
-        </div>
+          {/* Track Info */}
+          <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
+            {track.bpm && <span>{track.bpm} BPM</span>}
+            {track.trackKey && <span>{track.trackKey}</span>}
+            {track.moodType && <span>{track.moodType}</span>}
+          </div>
 
-        {/* Track Info */}
-        <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
-          {track.bpm && <span>{track.bpm} BPM</span>}
-          {track.trackKey && <span>{track.trackKey}</span>}
-          {track.moodType && <span>{track.moodType}</span>}
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-2">
+          {/* Actions - Removed heart button, full width Add to Cart */}
           <button
             onClick={() => handleAddToCart(track)}
-            className="flex-1 bg-[#E100FF] hover:bg-[#E100FF]/80 text-white py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
+            disabled={isInCart || isAdding}
+            className={`w-full py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${
+              isInCart 
+                ? 'bg-green-600/20 text-green-400 border border-green-500/30 cursor-not-allowed' 
+                : isAdding
+                  ? 'bg-[#E100FF]/50 text-white cursor-wait'
+                  : 'bg-[#E100FF] hover:bg-[#E100FF]/80 text-white'
+            }`}
           >
-            <FaShoppingCart size={14} />
-            Add to Cart
-          </button>
-          <button className="p-2 bg-[#232B43] hover:bg-[#232B43]/80 text-white rounded-lg transition-colors">
-            <FaHeart size={14} />
+            {isInCart ? (
+              <>
+                <FaCheck size={14} />
+                Added to Cart
+              </>
+            ) : isAdding ? (
+              'Adding...'
+            ) : (
+              <>
+                <FaShoppingCart size={14} />
+                Add to Cart
+              </>
+            )}
           </button>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-[#081028]">
@@ -294,12 +343,13 @@ export default function Marketplace() {
             {/* Filter Toggle */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${showFilters ? 'bg-[#E100FF] text-white' : 'bg-[#232B43] text-gray-300 hover:bg-[#232B43]/80'}`}
+              className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${showFilters ? 'bg-[#E100FF] text-white' : 'bg-[#0A1428] border border-[#232B43] text-white hover:border-[#E100FF]'}`}
             >
               <FaFilter />
               Filters
             </button>
 
+            {/* Search Button */}
             <button
               onClick={handleSearch}
               className="bg-[#E100FF] hover:bg-[#E100FF]/80 text-white px-6 py-3 rounded-lg transition-colors"
@@ -308,72 +358,59 @@ export default function Marketplace() {
             </button>
           </div>
 
-          {/* Expanded Filters */}
+          {/* Filter Panel */}
           {showFilters && (
-            <div className="mt-6 pt-6 border-t border-[#232B43]">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {/* Genre */}
-                <div>
-                  <label className="block text-gray-400 text-sm mb-2">Genre</label>
-                  <select
-                    value={selectedGenre}
-                    onChange={(e) => setSelectedGenre(e.target.value)}
-                    className="w-full bg-[#0A1428] border border-[#232B43] rounded-lg px-4 py-2 text-white focus:border-[#E100FF] focus:outline-none"
-                  >
-                    <option value="">All Genres</option>
-                    {genres.map(genre => (
-                      <option key={genre.id} value={genre.id}>{genre.name}</option>
-                    ))}
-                  </select>
-                </div>
+            <div className="mt-6 pt-6 border-t border-[#232B43] grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Genre Filter */}
+              <div>
+                <label className="text-gray-400 text-sm mb-2 block">Genre</label>
+                <select
+                  value={selectedGenre}
+                  onChange={(e) => setSelectedGenre(e.target.value)}
+                  className="w-full bg-[#0A1428] border border-[#232B43] rounded-lg px-4 py-2 text-white focus:border-[#E100FF] focus:outline-none"
+                >
+                  <option value="">All Genres</option>
+                  {genres.map(genre => (
+                    <option key={genre.id || genre._id} value={genre.id || genre._id}>
+                      {genre.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                {/* Min Price */}
-                <div>
-                  <label className="block text-gray-400 text-sm mb-2">Min Price</label>
-                  <input
-                    type="number"
-                    value={priceRange.min}
-                    onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
-                    placeholder="$0"
-                    className="w-full bg-[#0A1428] border border-[#232B43] rounded-lg px-4 py-2 text-white focus:border-[#E100FF] focus:outline-none"
-                  />
-                </div>
-
-                {/* Max Price */}
-                <div>
-                  <label className="block text-gray-400 text-sm mb-2">Max Price</label>
-                  <input
-                    type="number"
-                    value={priceRange.max}
-                    onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
-                    placeholder="$1000"
-                    className="w-full bg-[#0A1428] border border-[#232B43] rounded-lg px-4 py-2 text-white focus:border-[#E100FF] focus:outline-none"
-                  />
-                </div>
-
-                {/* Clear */}
-                <div className="flex items-end">
-                  <button
-                    onClick={clearFilters}
-                    className="w-full flex items-center justify-center gap-2 text-gray-400 hover:text-white py-2 transition-colors"
-                  >
-                    <FaTimes />
-                    Clear Filters
-                  </button>
-                </div>
+              {/* Price Range */}
+              <div>
+                <label className="text-gray-400 text-sm mb-2 block">Min Price</label>
+                <input
+                  type="number"
+                  value={priceRange.min}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
+                  placeholder="$0"
+                  className="w-full bg-[#0A1428] border border-[#232B43] rounded-lg px-4 py-2 text-white focus:border-[#E100FF] focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-gray-400 text-sm mb-2 block">Max Price</label>
+                <input
+                  type="number"
+                  value={priceRange.max}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
+                  placeholder="$1000"
+                  className="w-full bg-[#0A1428] border border-[#232B43] rounded-lg px-4 py-2 text-white focus:border-[#E100FF] focus:outline-none"
+                />
               </div>
             </div>
           )}
         </div>
 
         {/* Results Count */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6">
           <p className="text-gray-400">
-            Showing <span className="text-white">{tracks.length}</span> of <span className="text-white">{totalTracks}</span> tracks
+            Showing <span className="text-white font-semibold">{tracks.length}</span> of <span className="text-white font-semibold">{totalTracks}</span> tracks
           </p>
         </div>
 
-        {/* Tracks Grid */}
+        {/* Track Grid */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E100FF]"></div>

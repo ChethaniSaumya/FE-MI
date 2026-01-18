@@ -42,10 +42,10 @@ const LICENSE_INFO: Record<string, { name: string; color: string }> = {
   exclusive: { name: 'Exclusive', color: 'bg-[#E100FF]/20 text-[#E100FF]' }
 };
 
-// Payment methods by currency - ONLY Card (USD) and Kakao Pay (KRW)
+// Payment methods by currency
 const PAYMENT_METHODS_BY_CURRENCY: Record<string, string[]> = {
   usd: ['Credit/Debit Card'],
-  krw: ['Kakao Pay', 'Credit/Debit Card']
+  krw: ['Kakao Pay', 'Naver Pay', 'Samsung Pay', 'PAYCO', 'Korean Cards', 'Credit/Debit Card']
 };
 
 // Exchange rate (you can make this dynamic via API)
@@ -59,7 +59,7 @@ export default function Cart() {
   const [processing, setProcessing] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   
-  // Currency state - only USD or KRW (for Kakao Pay)
+  // Currency state for Kakao Pay support
   const [currency, setCurrency] = useState<'usd' | 'krw'>('usd');
 
   useEffect(() => {
@@ -105,6 +105,14 @@ export default function Cart() {
     return `$${priceUSD.toFixed(2)}`;
   };
 
+  // Get price in selected currency (for display in dropdowns)
+  const getPriceInCurrency = (priceUSD: number) => {
+    if (currency === 'krw') {
+      return Math.round(priceUSD * USD_TO_KRW_RATE);
+    }
+    return priceUSD;
+  };
+
   const handleRemoveItem = async (itemId: string) => {
     setRemovingId(itemId);
     try {
@@ -114,6 +122,7 @@ export default function Cart() {
 
       const data = await response.json();
       if (data.success) {
+        // Refresh cart
         if (user) fetchCart(user.id);
       }
     } catch (error) {
@@ -156,13 +165,14 @@ export default function Cart() {
         body: JSON.stringify({
           userId: user.id,
           items,
-          currency: currency
+          currency: currency  // Pass selected currency for Kakao Pay
         })
       });
 
       const data = await response.json();
 
       if (data.success && data.url) {
+        // Redirect to Stripe Checkout
         window.location.href = data.url;
       } else {
         alert(data.message || 'Checkout failed');
@@ -304,14 +314,13 @@ export default function Cart() {
               <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-xl border border-[#232B43] p-6 sticky top-24">
                 <h2 className="text-xl font-bold text-white mb-6">Order Summary</h2>
 
-                {/* Currency Selector - Only USD and KRW (Kakao Pay) */}
+                {/* Currency Selector */}
                 <div className="mb-6 p-4 bg-[#0A1428] rounded-xl border border-[#232B43]">
                   <div className="flex items-center gap-2 mb-3">
                     <FaGlobe className="text-[#E100FF]" />
-                    <span className="text-white font-medium">Payment Method</span>
+                    <span className="text-white font-medium">Select Currency</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    {/* USD - Card Payment */}
                     <button
                       onClick={() => setCurrency('usd')}
                       className={`py-3 px-4 rounded-lg border transition-all text-center ${
@@ -320,31 +329,44 @@ export default function Cart() {
                           : 'bg-[#101936] border-[#232B43] text-gray-400 hover:border-[#E100FF]/50'
                       }`}
                     >
-                      <div className="text-lg font-bold">💳 Card</div>
-                      <div className="text-xs mt-0.5 opacity-70">USD</div>
+                      <div className="text-lg font-bold">$ USD</div>
+                      <div className="text-xs mt-0.5 opacity-70">US Dollar</div>
                     </button>
-                    
-                    {/* KRW - Kakao Pay */}
                     <button
                       onClick={() => setCurrency('krw')}
                       className={`py-3 px-4 rounded-lg border transition-all text-center ${
                         currency === 'krw'
-                          ? 'bg-[#FEE500]/20 border-[#FEE500] text-white'
-                          : 'bg-[#101936] border-[#232B43] text-gray-400 hover:border-[#FEE500]/50'
+                          ? 'bg-[#E100FF]/20 border-[#E100FF] text-white'
+                          : 'bg-[#101936] border-[#232B43] text-gray-400 hover:border-[#E100FF]/50'
                       }`}
                     >
-                      <div className="text-lg font-bold">🟡 카카오페이</div>
-                      <div className="text-xs mt-0.5 opacity-70">KRW</div>
+                      <div className="text-lg font-bold">₩ KRW</div>
+                      <div className="text-xs mt-0.5 opacity-70">Korean Won</div>
                     </button>
+                  </div>
+                  
+                  {/* Available Payment Methods */}
+                  <div className="mt-3 pt-3 border-t border-[#232B43]">
+                    <p className="text-gray-500 text-xs mb-2">Available payment methods:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {PAYMENT_METHODS_BY_CURRENCY[currency].map((method) => (
+                        <span 
+                          key={method}
+                          className="px-2 py-1 bg-[#101936] rounded text-xs text-gray-300"
+                        >
+                          {method}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                   
                   {/* KRW Notice */}
                   {currency === 'krw' && (
-                    <div className="mt-3 p-2.5 bg-[#FEE500]/10 border border-[#FEE500]/30 rounded-lg">
-                      <p className="text-[#FEE500] text-xs">
-                        🇰🇷 카카오페이로 간편하게 결제하세요!
+                    <div className="mt-3 p-2.5 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                      <p className="text-yellow-400 text-xs">
+                        🇰🇷 카카오페이, 네이버페이로 결제하세요!
                       </p>
-                      <p className="text-[#FEE500]/70 text-xs mt-1">
+                      <p className="text-yellow-400/70 text-xs mt-1">
                         Rate: $1 = ₩{USD_TO_KRW_RATE.toLocaleString()}
                       </p>
                     </div>
@@ -378,21 +400,12 @@ export default function Cart() {
                 <button
                   onClick={handleCheckout}
                   disabled={processing}
-                  className={`w-full py-4 rounded-xl font-semibold transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 ${
-                    currency === 'krw'
-                      ? 'bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90'
-                      : 'bg-gradient-to-r from-[#E100FF] to-[#7C3AED] text-white hover:opacity-90'
-                  }`}
+                  className="w-full bg-gradient-to-r from-[#E100FF] to-[#7C3AED] text-white py-4 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {processing ? (
                     <>
                       <FaSpinner className="animate-spin" />
                       Processing...
-                    </>
-                  ) : currency === 'krw' ? (
-                    <>
-                      <span>카카오페이로 결제</span>
-                      <span>{formatPrice(cart.total)}</span>
                     </>
                   ) : (
                     <>
@@ -407,7 +420,7 @@ export default function Cart() {
                   <FaLock />
                   <span>
                     {currency === 'krw' 
-                      ? 'Kakao Pay 안전결제' 
+                      ? 'Secure checkout via Kakao Pay / Stripe' 
                       : 'Secure checkout powered by Stripe'
                     }
                   </span>
