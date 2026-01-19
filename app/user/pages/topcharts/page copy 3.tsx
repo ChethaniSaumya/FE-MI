@@ -7,22 +7,9 @@ import First_carousel from '../../components/First_carousel'
 import Footer from '../../components/Footer'
 import { trackAPI, imageAPI, genreAPI, downloadAPI } from '../../../utils/api'
 import { FaPlay, FaPause } from 'react-icons/fa'
-import { useRouter } from 'next/navigation';
 
 function TopChartsContent() {
 
-  interface TrackType {
-    id: string;
-    trackName: string;
-    musician: string;
-    trackPrice: number;
-    trackImage: string;
-    trackFile?: string;
-    genreCategory?: string | string[];
-    // Add other properties your track might have
-  }
-
-  const router = useRouter();
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
@@ -48,9 +35,11 @@ function TopChartsContent() {
   // Search state for genres
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Dropdown filter states - REMOVED selectedTrackType and selectedBPM
+  // Dropdown filter states
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [selectedTrackType, setSelectedTrackType] = useState<string | null>(null);
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [selectedBPM, setSelectedBPM] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   // Price range state
@@ -222,9 +211,26 @@ function TopChartsContent() {
       if (!hasGenre) return false;
     }
 
+    // Track type filter
+    if (selectedTrackType && track.trackType !== selectedTrackType) {
+      return false;
+    }
+
     // Mood filter
     if (selectedMood && track.moodType !== selectedMood) {
       return false;
+    }
+
+    // BPM filter
+    if (selectedBPM) {
+      const trackBpm = parseInt(track.bpm) || 0;
+      // Handle BPM ranges like "60-90", "90-120", etc.
+      if (selectedBPM.includes('-')) {
+        const [minBpm, maxBpm] = selectedBPM.split('-').map(Number);
+        if (trackBpm < minBpm || trackBpm > maxBpm) {
+          return false;
+        }
+      }
     }
 
     // Key filter
@@ -349,7 +355,7 @@ function TopChartsContent() {
     }
   };
 
-  // Handle dropdown option selection - REMOVED Track Type and BPM cases
+  // Handle dropdown option selection
   const handleDropdownOption = (category: string, value: string) => {
     console.log('Dropdown option selected:', category, value);
 
@@ -358,8 +364,14 @@ function TopChartsContent() {
       case 'Genre':
         setSelectedGenre(selectedGenre === value ? null : value);
         break;
+      case 'Track Type':
+        setSelectedTrackType(selectedTrackType === value ? null : value);
+        break;
       case 'Mood':
         setSelectedMood(selectedMood === value ? null : value);
+        break;
+      case 'BPM':
+        setSelectedBPM(selectedBPM === value ? null : value);
         break;
       case 'Key':
         setSelectedKey(selectedKey === value ? null : value);
@@ -532,7 +544,7 @@ function TopChartsContent() {
       <div className="containerpaddin container mx-auto pt-34 sm:pt-28 md:pt-32 lg:pt-36">
         <h1 className="text-white text-4xl font-roboto font-bold mb-4">Top Charts</h1>
         <First_carousel />
-
+        
         {/* Search Bar - NO TAG PILLS */}
         <div className='md:flex items-center overflow-hidden'>
           <div className='bg-black/40 backdrop-blur-sm rounded-full border border-white/50'>
@@ -553,7 +565,7 @@ function TopChartsContent() {
           </div>
         </div>
 
-        {/* Filter Dropdowns - ONLY GENRE, MOOD, KEY */}
+        {/* Filter Dropdowns - NO INSTRUMENTS */}
         <div
           className='flex items-center justify-between gap-2 overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing py-2 mt-4'
           onMouseDown={handleMouseDown}
@@ -578,19 +590,19 @@ function TopChartsContent() {
                 trackGenres.forEach((genreId: string) => allGenreIds.add(genreId));
               });
 
-              // Get genre names from the genres state (loaded from API)
-              const genreNames = Array.from(allGenreIds)
-                .map(id => getGenreName(id))
-                .filter(name => name && name !== ''); // Filter out empty names
-
+              const genreNames = Array.from(allGenreIds).map(id => getGenreName(id));
+              const trackTypes = [...new Set(data.map(track => track.trackType).filter(Boolean))];
               const moods = [...new Set(data.map(track => track.moodType).filter(Boolean))];
+              const bpms = [...new Set(data.map(track => track.bpm).filter(Boolean))];
               const keys = [...new Set(data.map(track => track.trackKey).filter(Boolean))];
-
-              // NO TRACK TYPE, NO INSTRUMENTS, NO BPM - Only Genre, Mood, and Key
+              
+              // NO INSTRUMENTS HERE
               const dropdowns = [
-                { id: 1, category: "Genre", options: genreNames.sort() },
-                { id: 2, category: "Mood", options: moods.sort() },
-                { id: 3, category: "Key", options: keys.sort() }
+                { id: 1, category: "Genre", options: genreNames },
+                { id: 2, category: "Track Type", options: trackTypes },
+                { id: 4, category: "Mood", options: moods },
+                { id: 5, category: "BPM", options: bpms },
+                { id: 7, category: "Key", options: keys }
               ];
 
               return dropdowns.map((dropdown) => (
@@ -628,21 +640,15 @@ function TopChartsContent() {
                       </div>
                       <div className="py-2 overflow-y-auto scrollbar-hide max-h-80">
                         {/* Dynamic options */}
-                        {dropdown.options.length > 0 ? (
-                          dropdown.options.map((item: string, index: number) => (
-                            <div
-                              key={index}
-                              className="px-4 py-3 text-white hover:bg-white/20 cursor-pointer transition-colors duration-150 border-l-2 border-transparent hover:border-white/30"
-                              onClick={() => handleDropdownOption(dropdown.category, item)}
-                            >
-                              {item}
-                            </div>
-                          ))
-                        ) : (
-                          <div className="px-4 py-3 text-gray-400 text-sm">
-                            No {dropdown.category.toLowerCase()} options available
+                        {dropdown.options.map((item: string, index: number) => (
+                          <div
+                            key={index}
+                            className="px-4 py-3 text-white hover:bg-white/20 cursor-pointer transition-colors duration-150 border-l-2 border-transparent hover:border-white/30"
+                            onClick={() => handleDropdownOption(dropdown.category, item)}
+                          >
+                            {item}
                           </div>
-                        )}
+                        ))}
                       </div>
                     </div>
                   )}
@@ -765,8 +771,8 @@ function TopChartsContent() {
           </div>
         )}
 
-        {/* Debug info - REMOVED Track Type and BPM */}
-        {(carouselFilter || searchQuery || selectedGenre || selectedMood || selectedKey || (priceRange.min > minPrice || priceRange.max < maxPrice)) && (
+        {/* Debug info - NO TAG OR INSTRUMENT */}
+        {(carouselFilter || searchQuery || selectedGenre || selectedTrackType || selectedMood || selectedBPM || selectedKey || (priceRange.min > minPrice || priceRange.max < maxPrice)) && (
           <div className="mt-4 mb-4 p-3 bg-black/20 rounded-lg">
             <p className="text-white text-sm">
               {carouselFilter && (
@@ -804,6 +810,17 @@ function TopChartsContent() {
                   </button> |
                 </span>
               )}
+              {selectedTrackType && (
+                <span>
+                  <strong>Type:</strong> <span className="text-primary font-bold">{selectedTrackType}</span>
+                  <button
+                    onClick={() => setSelectedTrackType(null)}
+                    className="ml-2 text-primary hover:text-white text-xs underline"
+                  >
+                    ✕
+                  </button> |
+                </span>
+              )}
               {(priceRange.min > minPrice || priceRange.max < maxPrice) && (
                 <span>
                   <strong>Price Range:</strong> <span className="text-primary font-bold">${priceRange.min} - ${priceRange.max}</span>
@@ -820,6 +837,17 @@ function TopChartsContent() {
                   <strong>Mood:</strong> <span className="text-primary font-bold">{selectedMood}</span>
                   <button
                     onClick={() => setSelectedMood(null)}
+                    className="ml-2 text-primary hover:text-white text-xs underline"
+                  >
+                    ✕
+                  </button> |
+                </span>
+              )}
+              {selectedBPM && (
+                <span>
+                  <strong>BPM:</strong> <span className="text-primary font-bold">{selectedBPM}</span>
+                  <button
+                    onClick={() => setSelectedBPM(null)}
                     className="ml-2 text-primary hover:text-white text-xs underline"
                   >
                     ✕
@@ -843,7 +871,9 @@ function TopChartsContent() {
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedGenre(null);
+                  setSelectedTrackType(null);
                   setSelectedMood(null);
+                  setSelectedBPM(null);
                   setSelectedKey(null);
                   setPriceRange({ min: minPrice, max: maxPrice });
                   clearCarouselFilter();
@@ -859,8 +889,10 @@ function TopChartsContent() {
                 carouselFilter && 'Carousel',
                 searchQuery && 'Search',
                 selectedGenre && 'Genre',
+                selectedTrackType && 'Track Type',
                 (priceRange.min > minPrice || priceRange.max < maxPrice) && 'Price Range',
                 selectedMood && 'Mood',
+                selectedBPM && 'BPM',
                 selectedKey && 'Key',
               ].filter(Boolean).join(', ')}
             </p>
@@ -910,7 +942,9 @@ function TopChartsContent() {
                     onClick={() => {
                       setSearchQuery('');
                       setSelectedGenre(null);
+                      setSelectedTrackType(null);
                       setSelectedMood(null);
+                      setSelectedBPM(null);
                       setSelectedKey(null);
                       setPriceRange({ min: minPrice, max: maxPrice });
                       clearCarouselFilter();
@@ -952,16 +986,7 @@ function TopChartsContent() {
                         </div>
                       </div>
                       <h1 className="text-white text-md font-roboto font-bold mt-2 line-clamp-2">{track.trackName}</h1>
-                      <h1
-                        className="text-white text-sm font-roboto hover:text-primary cursor-pointer transition-colors"
-                        onClick={() => {
-                          if (track.musician && track.musician.trim() !== '') {
-                            router.push(`/user/pages/Musicians/${encodeURIComponent(track.musician)}`);
-                          }
-                        }}
-                      >
-                        {track.musician}
-                      </h1>
+                      <h1 className="text-white text-sm font-roboto">{track.musician}</h1>
                       <div className="grid grid-cols-8 gap-2 mt-auto">
                         <button className="grid col-span-6 bg-white/20 backdrop-blur-sm rounded-full font-bold text-white justify-center items-center rounded-sm hover:bg-white/30 transition-colors duration-200">
                           $ {track.trackPrice || 0}

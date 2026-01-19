@@ -4,16 +4,16 @@ import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { FaMusic, FaImage, FaSpinner, FaCheck, FaTimes, FaStripe, FaExclamationCircle, FaExternalLinkAlt } from 'react-icons/fa';
-import { stripeConnectAPI, genreAPI } from '../../../utils/api';
+import { stripeConnectAPI } from '../../../utils/api';
 
 // Stripe Connect Banner Component
-const StripeConnectBanner = ({
-    status,
-    onConnect,
-    loading
-}: {
-    status: any;
-    onConnect: () => void;
+const StripeConnectBanner = ({ 
+    status, 
+    onConnect, 
+    loading 
+}: { 
+    status: any; 
+    onConnect: () => void; 
     loading: boolean;
 }) => {
     if (!status) return null;
@@ -89,33 +89,17 @@ function Upload() {
     const router = useRouter();
     const audioInputRef = useRef<HTMLInputElement>(null);
     const imageInputRef = useRef<HTMLInputElement>(null);
-    const genreDropdownRef = useRef<HTMLDivElement>(null);
-
+    
     const [user, setUser] = useState<any>(null);
     const [stripeStatus, setStripeStatus] = useState<any>(null);
     const [stripeLoading, setStripeLoading] = useState(true);
     const [connectLoading, setConnectLoading] = useState(false);
-
+    
     const [audioFile, setAudioFile] = useState<File | null>(null);
     const [audioPreview, setAudioPreview] = useState<string | null>(null);
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
-
-    // Genre selection state - FETCH FROM ADMIN PANEL
-    const [availableGenres, setAvailableGenres] = useState<{ id: string, name: string }[]>([]);
-    const [genresLoading, setGenresLoading] = useState(false);
-    const [showGenreDropdown, setShowGenreDropdown] = useState(false);
-    const [genreSearchQuery, setGenreSearchQuery] = useState('');
-
-    // UPDATED: All key options from Track Management
-    const trackKeyOptions = [
-        "None", "Cm", "Dm", "Em", "Fm", "Gm", "Bm", "F♯m", "Am", "C♯m", "D♯m", "G♯m", "A♯m", "E♭m", "CM", "B♭m", "DM", "A♭m", "GM", "EM", "AM", "FM", "BM", "F♯M", "D♭m", "E♭M", "A♭M", "C♯M", "D♭M", "B♭M", "A♯M", "G♭M", "C♭M", "D♯M", "G♯M"
-    ];
-
-    const moodOptions = [
-        "Bouncy", "Dark", "Energetic", "Soulful", "Inspiring", "Confident", "Sad", "Mellow", "Relaxed", "Calm", "Angry", "Happy", "Epic", "Accomplished", "Quirky", "Determined", "Crazy", "Loved", "Intense", "Powerful", "Dirty", "Lonely", "Depressed", "Hyper", "Flirty", "Grateful", "Rebellious", "Peaceful", "Evil", "Adored", "Gloomy", "Romantic", "Anxious", "Crunk", "Eccentric", "Neutral", "Exciting", "Dramatic", "Enraged", "Tense", "Majestic", "Annoyed", "Disappointed", "Lazy", "Silly", "Giddy", "Frantic", "Scared", "Scary", "Chill", "Bold", "Melancholy", "Seductive", "Dreamy", "Carefree", "Restless", "Mysterious", "Dancy", "Euphoric", "Rage", "Warm", "Optimistic", "Uplifting", "Sentimental", "Hopeful", "Cheerful", "Soothing", "Heartfelt", "Playful"
-    ];
-
+    
     const [formData, setFormData] = useState({
         trackName: '',
         trackType: 'Beats',
@@ -135,29 +119,7 @@ function Upload() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [uploadSuccess, setUploadSuccess] = useState(false);
-    const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
-    // Load genres from admin panel
-    useEffect(() => {
-        const loadGenres = async () => {
-            try {
-                setGenresLoading(true);
-                const response = await genreAPI.getGenres();
-                if (response.success) {
-                    setAvailableGenres(response.genres.map((g: any) => ({
-                        id: g.id,
-                        name: g.name
-                    })));
-                }
-            } catch (error) {
-                console.error('Error loading genres:', error);
-            } finally {
-                setGenresLoading(false);
-            }
-        };
-
-        loadGenres();
-    }, []);
+    const [submitMessage, setSubmitMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
     // Check authentication
     useEffect(() => {
@@ -169,20 +131,6 @@ function Upload() {
         const userInfo = JSON.parse(userData);
         setUser(userInfo);
         checkStripeStatus(userInfo.id);
-    }, []);
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (genreDropdownRef.current && !genreDropdownRef.current.contains(event.target as Node)) {
-                setShowGenreDropdown(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
     }, []);
 
     const checkStripeStatus = async (userId: string) => {
@@ -200,16 +148,16 @@ function Upload() {
 
     const handleConnectStripe = async () => {
         if (!user) return;
-
+        
         try {
             setConnectLoading(true);
-
+            
             if (!stripeStatus?.connected) {
                 await stripeConnectAPI.createAccount(user.id);
             }
-
+            
             const response = await stripeConnectAPI.getOnboardingLink(user.id);
-
+            
             if (response.success && response.url) {
                 window.location.href = response.url;
             }
@@ -276,46 +224,19 @@ function Upload() {
         }
     };
 
-    // Genre selection handlers
-    const handleGenreToggle = (genreId: string) => {
-        setFormData(prev => ({
-            ...prev,
-            genreCategory: prev.genreCategory.includes(genreId)
-                ? prev.genreCategory.filter(id => id !== genreId)
-                : [...prev.genreCategory, genreId]
-        }));
-    };
-
-    const handleRemoveGenre = (genreId: string) => {
-        setFormData(prev => ({
-            ...prev,
-            genreCategory: prev.genreCategory.filter(id => id !== genreId)
-        }));
-    };
-
-    // Get genre name by ID
-    const getGenreName = (genreId: string) => {
-        const genre = availableGenres.find(g => g.id === genreId);
-        return genre ? genre.name : genreId;
-    };
-
-    const filteredGenres = availableGenres.filter(genre =>
-        genre.name.toLowerCase().includes(genreSearchQuery.toLowerCase())
-    );
-
-    // Calculate earnings with Stripe fee deduction
+    // UPDATED: Calculate earnings with Stripe fee deduction
     const calculateEarnings = (price: string) => {
         const priceNum = parseFloat(price) || 0;
-
+        
         // Platform fee: 15%
         const platformFee = (priceNum * PLATFORM_FEE_PERCENT) / 100;
-
+        
         // Stripe fee: 2.9% + $0.30
         const stripeFee = (priceNum * 0.029) + 0.30;
-
+        
         // Seller earnings = Price - Platform Fee - Stripe Fee
         const earnings = priceNum - platformFee - stripeFee;
-
+        
         return {
             price: priceNum,
             platformFee: Math.round(platformFee * 100) / 100,
@@ -326,7 +247,7 @@ function Upload() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
+        
         if (!stripeStatus?.connected || !stripeStatus?.payoutsEnabled) {
             setSubmitMessage({
                 type: 'error',
@@ -359,7 +280,7 @@ function Upload() {
             if (imageFile) {
                 submitData.append('image', imageFile);
             }
-
+            
             submitData.append('trackName', formData.trackName);
             submitData.append('trackType', formData.trackType);
             submitData.append('bpm', formData.bpm);
@@ -389,7 +310,7 @@ function Upload() {
                     type: 'success',
                     text: 'Track uploaded successfully! Redirecting...'
                 });
-
+                
                 setTimeout(() => {
                     router.push('/user/pages/MyTracks');
                 }, 2000);
@@ -434,7 +355,7 @@ function Upload() {
     return (
         <div className="min-h-screen">
             <Navbar />
-
+            
             <div className="container mx-auto px-4 py-8 pt-32">
                 <div className="max-w-4xl mx-auto">
                     {/* Header */}
@@ -444,7 +365,7 @@ function Upload() {
                     </div>
 
                     {/* Stripe Connect Banner */}
-                    <StripeConnectBanner
+                    <StripeConnectBanner 
                         status={stripeStatus}
                         onConnect={handleConnectStripe}
                         loading={connectLoading}
@@ -453,7 +374,7 @@ function Upload() {
                     {/* Upload Form */}
                     <div className={`${!canUpload ? 'opacity-50 pointer-events-none' : ''}`}>
                         <form onSubmit={handleSubmit} className="space-y-6">
-
+                            
                             {/* File Upload Section */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* Audio Upload */}
@@ -462,10 +383,11 @@ function Upload() {
                                         <FaMusic className="mr-2 text-[#E100FF]" />
                                         Audio File *
                                     </h3>
-                                    <div
+                                    <div 
                                         onClick={() => !uploadSuccess && audioInputRef.current?.click()}
-                                        className={`border-2 border-dashed border-white/30 rounded-lg p-8 text-center transition-colors ${uploadSuccess ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-[#E100FF]/50'
-                                            }`}
+                                        className={`border-2 border-dashed border-white/30 rounded-lg p-8 text-center transition-colors ${
+                                            uploadSuccess ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-[#E100FF]/50'
+                                        }`}
                                     >
                                         {audioPreview ? (
                                             <div className="space-y-2">
@@ -497,10 +419,11 @@ function Upload() {
                                         <FaImage className="mr-2 text-[#E100FF]" />
                                         Cover Image
                                     </h3>
-                                    <div
+                                    <div 
                                         onClick={() => !uploadSuccess && imageInputRef.current?.click()}
-                                        className={`border-2 border-dashed border-white/30 rounded-lg p-8 text-center transition-colors ${uploadSuccess ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-[#E100FF]/50'
-                                            }`}
+                                        className={`border-2 border-dashed border-white/30 rounded-lg p-8 text-center transition-colors ${
+                                            uploadSuccess ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-[#E100FF]/50'
+                                        }`}
                                     >
                                         {imagePreview ? (
                                             <img src={imagePreview} alt="Cover" className="max-h-32 mx-auto rounded" />
@@ -542,6 +465,23 @@ function Upload() {
                                         />
                                     </div>
 
+                                    {/* Track Type */}
+                                    <div>
+                                        <label className="text-gray-300 text-sm mb-1 block">Track Type</label>
+                                        <select
+                                            name="trackType"
+                                            value={formData.trackType}
+                                            onChange={handleInputChange}
+                                            className={selectClass}
+                                            disabled={uploadSuccess}
+                                        >
+                                            <option value="Beats">Beats</option>
+                                            <option value="Loops">Loops</option>
+                                            <option value="Samples">Samples</option>
+                                            <option value="Full Track">Full Track</option>
+                                        </select>
+                                    </div>
+
                                     {/* BPM */}
                                     <div>
                                         <label className="text-gray-300 text-sm mb-1 block">BPM</label>
@@ -556,7 +496,7 @@ function Upload() {
                                         />
                                     </div>
 
-                                    {/* Key - UPDATED WITH ALL OPTIONS */}
+                                    {/* Key */}
                                     <div>
                                         <label className="text-gray-300 text-sm mb-1 block">Key</label>
                                         <select
@@ -567,7 +507,18 @@ function Upload() {
                                             disabled={uploadSuccess}
                                         >
                                             <option value="">Select key</option>
-                                            {trackKeyOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                            <option value="C">C</option>
+                                            <option value="C#">C#</option>
+                                            <option value="D">D</option>
+                                            <option value="D#">D#</option>
+                                            <option value="E">E</option>
+                                            <option value="F">F</option>
+                                            <option value="F#">F#</option>
+                                            <option value="G">G</option>
+                                            <option value="G#">G#</option>
+                                            <option value="A">A</option>
+                                            <option value="A#">A#</option>
+                                            <option value="B">B</option>
                                         </select>
                                     </div>
 
@@ -582,7 +533,12 @@ function Upload() {
                                             disabled={uploadSuccess}
                                         >
                                             <option value="">Select mood</option>
-                                            {moodOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                            <option value="Happy">Happy</option>
+                                            <option value="Sad">Sad</option>
+                                            <option value="Energetic">Energetic</option>
+                                            <option value="Chill">Chill</option>
+                                            <option value="Dark">Dark</option>
+                                            <option value="Uplifting">Uplifting</option>
                                         </select>
                                     </div>
 
@@ -601,96 +557,6 @@ function Upload() {
                                             <option value="High">High</option>
                                         </select>
                                     </div>
-
-                                    {/* Genre Selection */}
-                                    <div className="md:col-span-2 relative" ref={genreDropdownRef}>
-                                        <label className="text-gray-300 text-sm mb-1 block">Genre</label>
-                                        <div className="relative">
-                                            <button
-                                                type="button"
-                                                onClick={() => !uploadSuccess && setShowGenreDropdown(!showGenreDropdown)}
-                                                disabled={uploadSuccess || genresLoading}
-                                                className={`${inputClass} text-left flex items-center justify-between`}
-                                            >
-                                                <span className={formData.genreCategory.length > 0 ? 'text-white' : 'text-gray-400'}>
-                                                    {genresLoading ? 'Loading genres...' :
-                                                        formData.genreCategory.length > 0
-                                                            ? `${formData.genreCategory.length} genre(s) selected`
-                                                            : 'Select genres'}
-                                                </span>
-                                                <svg className={`w-5 h-5 transition-transform ${showGenreDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                </svg>
-                                            </button>
-
-                                            {/* Genre Dropdown */}
-                                            {showGenreDropdown && !uploadSuccess && (
-                                                <div className="absolute z-[100] w-full mt-1 bg-[#1a1f35] border border-white/20 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-                                                    {/* Search Input */}
-                                                    <div className="p-2 border-b border-white/10 sticky top-0 bg-[#1a1f35] z-[101]">
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Search genres..."
-                                                            value={genreSearchQuery}
-                                                            onChange={(e) => setGenreSearchQuery(e.target.value)}
-                                                            className="w-full bg-[#0f1425] border border-white/10 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-[#E100FF]"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        />
-                                                    </div>
-
-                                                    {/* Genre Options */}
-                                                    <div className="p-2">
-                                                        {filteredGenres.length > 0 ? (
-                                                            filteredGenres.map((genre) => {
-                                                                const isSelected = formData.genreCategory.includes(genre.id);
-                                                                return (
-                                                                    <div
-                                                                        key={genre.id}
-                                                                        onClick={() => handleGenreToggle(genre.id)}
-                                                                        className="flex items-center px-3 py-2 hover:bg-white/10 rounded cursor-pointer transition-colors"
-                                                                    >
-                                                                        <div className="flex items-center justify-center w-5 h-5 mr-3">
-                                                                            {isSelected && (
-                                                                                <FaCheck className="text-[#E100FF] text-sm" />
-                                                                            )}
-                                                                        </div>
-                                                                        <span className="text-white text-sm">{genre.name}</span>
-                                                                    </div>
-                                                                );
-                                                            })
-                                                        ) : (
-                                                            <div className="px-3 py-4 text-gray-400 text-sm text-center">
-                                                                {genreSearchQuery ? 'No genres found' : 'No genres available'}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Selected Genres Display */}
-                                        {formData.genreCategory.length > 0 && (
-                                            <div className="mt-3 flex flex-wrap gap-2">
-                                                {formData.genreCategory.map((genreId) => (
-                                                    <span
-                                                        key={genreId}
-                                                        className="inline-flex items-center px-3 py-1 bg-[#E100FF]/20 text-[#E100FF] rounded-full text-sm"
-                                                    >
-                                                        {getGenreName(genreId)}
-                                                        {!uploadSuccess && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleRemoveGenre(genreId)}
-                                                                className="ml-2 hover:text-white transition-colors"
-                                                            >
-                                                                <FaTimes className="text-xs" />
-                                                            </button>
-                                                        )}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
                                 </div>
 
                                 {/* Description */}
@@ -708,14 +574,14 @@ function Upload() {
                                 </div>
                             </div>
 
-                            {/* Pricing Section */}
+                            {/* Pricing Section - UPDATED */}
                             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
                                 <h3 className="text-white font-medium mb-2">Pricing</h3>
                                 <p className="text-gray-400 text-sm mb-4">
-                                    Set your base price. Commercial and Exclusive prices are calculated automatically.
+                                    Set your base price. Commercial and Exclusive prices are calculated automatically. 
                                     Platform fee is {PLATFORM_FEE_PERCENT}% and Stripe processing fee (2.9% + $0.30) is deducted from your earnings.
                                 </p>
-
+                                
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     {/* Personal License */}
                                     <div>
@@ -862,10 +728,11 @@ function Upload() {
 
                             {/* Submit Message */}
                             {submitMessage && (
-                                <div className={`p-4 rounded-lg flex items-center space-x-2 ${submitMessage.type === 'success'
-                                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                <div className={`p-4 rounded-lg flex items-center space-x-2 ${
+                                    submitMessage.type === 'success' 
+                                        ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
                                         : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                                    }`}>
+                                }`}>
                                     {submitMessage.type === 'success' ? <FaCheck /> : <FaTimes />}
                                     <span>{submitMessage.text}</span>
                                 </div>
@@ -875,10 +742,11 @@ function Upload() {
                             <button
                                 type="submit"
                                 disabled={isButtonDisabled}
-                                className={`w-full py-3 rounded-lg font-semibold transition-colors ${isButtonDisabled
+                                className={`w-full py-3 rounded-lg font-semibold transition-colors ${
+                                    isButtonDisabled
                                         ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
                                         : 'bg-[#E100FF] text-white hover:bg-[#c000dd]'
-                                    }`}
+                                }`}
                             >
                                 {isLoading ? (
                                     <span className="flex items-center justify-center">

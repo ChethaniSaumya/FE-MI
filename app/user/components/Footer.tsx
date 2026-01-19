@@ -43,7 +43,7 @@ function Footer() {
             <ul className="space-y-2">
               <li><a href="/user/pages/home" className="text-gray-400 hover:text-white transition-colors font-roboto font-light-300 text-sm">Home</a></li>
               <li><a href="/user/pages/topcharts" className="text-gray-400 hover:text-white transition-colors font-roboto font-light-300 text-sm">Top Charts</a></li>
-              <li><a href="/user/pages/SoundsKit" className="text-gray-400 hover:text-white transition-colors font-roboto font-light-300 text-sm">Sound Kits</a></li>
+              {/*<li><a href="/user/pages/SoundsKit" className="text-gray-400 hover:text-white transition-colors font-roboto font-light-300 text-sm">Sound Kits</a></li>*/}
               <li><a href="/user/pages/Musicians" className="text-gray-400 hover:text-white transition-colors font-roboto font-light-300 text-sm">Musicians</a></li>
             </ul>
           </div>

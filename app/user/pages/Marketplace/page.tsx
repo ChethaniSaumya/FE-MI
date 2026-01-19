@@ -4,12 +4,12 @@ import { useRouter } from 'next/navigation'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import toast from '../../components/Toast'
-import { 
-  FaSearch, 
-  FaFilter, 
-  FaPlay, 
-  FaPause, 
-  FaShoppingCart, 
+import {
+  FaSearch,
+  FaFilter,
+  FaPlay,
+  FaPause,
+  FaShoppingCart,
   FaMusic,
   FaSortAmountDown,
   FaTimes,
@@ -36,23 +36,23 @@ interface Track {
 export default function Marketplace() {
   const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  
+
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [genres, setGenres] = useState<any[]>([]);
-  
+
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('');
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [sortBy, setSortBy] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalTracks, setTotalTracks] = useState(0);
-  
+
   // Audio player
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -112,7 +112,7 @@ export default function Marketplace() {
         limit: '12',
         sortBy
       });
-      
+
       if (searchQuery) params.append('search', searchQuery);
       if (selectedGenre) params.append('genre', selectedGenre);
       if (priceRange.min) params.append('minPrice', priceRange.min);
@@ -160,9 +160,9 @@ export default function Marketplace() {
         audioRef.current.play();
         setCurrentPlayingId(track.id);
         setIsPlaying(true);
-        
+
         // Track play count
-        fetch(`http://localhost:3001/api/tracks/${track.id}/play`, { method: 'POST' }).catch(() => {});
+        fetch(`http://localhost:3001/api/tracks/${track.id}/play`, { method: 'POST' }).catch(() => { });
       }
     }
   };
@@ -191,7 +191,7 @@ export default function Marketplace() {
           licenseType: 'personal'
         })
       });
-      
+
       const data = await response.json();
       if (data.success) {
         setCartCount(prev => prev + 1);
@@ -228,8 +228,8 @@ export default function Marketplace() {
       <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-xl overflow-hidden border border-[#232B43] hover:border-[#E100FF]/50 transition-all duration-300 group">
         {/* Image */}
         <div className="relative aspect-square overflow-hidden cursor-pointer" onClick={() => handleTrackClick(track.id)}>
-          <img 
-            src={track.trackImage || '/default-track.jpg'} 
+          <img
+            src={track.trackImage || '/default-track.jpg'}
             alt={track.trackName}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />
@@ -249,7 +249,7 @@ export default function Marketplace() {
 
         {/* Info */}
         <div className="p-4">
-          <h3 
+          <h3
             className="text-white font-semibold text-lg mb-1 truncate cursor-pointer hover:text-[#E100FF] transition-colors"
             onClick={() => handleTrackClick(track.id)}
           >
@@ -257,10 +257,29 @@ export default function Marketplace() {
           </h3>
           <div className="flex items-center gap-2 mb-3">
             {track.musicianProfilePicture && (
-              <img src={track.musicianProfilePicture} alt="" className="w-6 h-6 rounded-full object-cover" />
+              <img
+                src={track.musicianProfilePicture}
+                alt=""
+                className="w-6 h-6 rounded-full object-cover cursor-pointer"
+                onClick={() => {
+                  if (track.musician) {
+                    router.push(`/user/pages/Musicians/${encodeURIComponent(track.musician)}`);
+                  }
+                }}
+              />
             )}
-            <span className="text-gray-400 text-sm truncate">{track.musician}</span>
+            <span
+              className="text-gray-400 text-sm truncate hover:text-[#E100FF] cursor-pointer transition-colors"
+              onClick={() => {
+                if (track.musician) {
+                  router.push(`/user/pages/Musicians/${encodeURIComponent(track.musician)}`);
+                }
+              }}
+            >
+              {track.musician}
+            </span>
           </div>
+
 
           {/* Track Info */}
           <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
@@ -273,13 +292,12 @@ export default function Marketplace() {
           <button
             onClick={() => handleAddToCart(track)}
             disabled={isInCart || isAdding}
-            className={`w-full py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${
-              isInCart 
-                ? 'bg-green-600/20 text-green-400 border border-green-500/30 cursor-not-allowed' 
+            className={`w-full py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${isInCart
+                ? 'bg-green-600/20 text-green-400 border border-green-500/30 cursor-not-allowed'
                 : isAdding
                   ? 'bg-[#E100FF]/50 text-white cursor-wait'
                   : 'bg-[#E100FF] hover:bg-[#E100FF]/80 text-white'
-            }`}
+              }`}
           >
             {isInCart ? (
               <>
@@ -304,7 +322,7 @@ export default function Marketplace() {
     <div className="min-h-screen bg-[#081028]">
       <Navbar />
       <audio ref={audioRef} onEnded={() => setIsPlaying(false)} />
-      
+
       <div className="container mx-auto px-4 pt-24 pb-12">
         {/* Header */}
         <div className="mb-8">
@@ -445,7 +463,7 @@ export default function Marketplace() {
             >
               Previous
             </button>
-            
+
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               const page = i + 1;
               return (
@@ -458,7 +476,7 @@ export default function Marketplace() {
                 </button>
               );
             })}
-            
+
             <button
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}

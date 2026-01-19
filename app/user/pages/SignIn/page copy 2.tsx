@@ -81,80 +81,80 @@ function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (validateForm()) {
-      setIsLoading(true);
-      setSubmitMessage(null);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (validateForm()) {
+    setIsLoading(true);
+    setSubmitMessage(null);
+    
+    try {
+      // Call your authentication API
+      const response = await authAPI.signin({
+        email: formData.email,
+        password: formData.password
+      });
       
-      try {
-        // Call your authentication API
-        const response = await authAPI.signin({
-          email: formData.email,
-          password: formData.password
+      if (response.success) {
+        setSubmitMessage({
+          type: 'success',
+          text: 'Login successful! Redirecting...'
         });
         
-        if (response.success) {
-          setSubmitMessage({
-            type: 'success',
-            text: 'Login successful! Redirecting...'
-          });
-          
-          // Store user data with all role flags
-          const userData = {
-            ...response.user,
-            // These come from your backend response
-            isAdmin: response.user.isAdmin || false,
-            role: response.user.role || 'user',
-            isCreator: response.user.isCreator || false,
-            isBuyer: response.user.isBuyer || true
-          };
-          
-          // Store user data in localStorage
-          localStorage.setItem('user', JSON.stringify(userData));
-          
-          // Set cookie for middleware
-          document.cookie = `user=${JSON.stringify(userData)}; path=/; max-age=86400; SameSite=Strict`;
-          
-          // Redirect based on role
-          setTimeout(() => {
-            if (userData.isAdmin && userData.role === 'admin') {
-              window.location.href = '/admin';
-            } else {
-              window.location.href = '/user/pages/CreatorDashboard';
-            }
-          }, 1500);
-        } else {
-          setSubmitMessage({
-            type: 'error',
-            text: response.message || 'Invalid credentials'
-          });
-        }
-      } catch (error: any) {
-        console.error('Signin error:', error);
+        // Store user data with all role flags
+        const userData = {
+          ...response.user,
+          // These should come from your backend response
+          isAdmin: response.user.isAdmin || false,
+          role: response.user.role || 'user',
+          isCreator: response.user.isCreator || false,
+          isBuyer: response.user.isBuyer || true
+        };
         
-        // Handle specific error cases
-        if (error.response?.status === 401) {
-          setSubmitMessage({
-            type: 'error',
-            text: 'Invalid email/username or password'
-          });
-        } else if (error.response?.data?.message) {
-          setSubmitMessage({
-            type: 'error',
-            text: error.response.data.message
-          });
-        } else {
-          setSubmitMessage({
-            type: 'error',
-            text: 'Network error. Please check your connection.'
-          });
-        }
-      } finally {
-        setIsLoading(false);
+        // Store user data in localStorage
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Set cookie for middleware
+        document.cookie = `user=${JSON.stringify(userData)}; path=/; max-age=86400; SameSite=Strict`;
+        
+        // Redirect based on role
+        setTimeout(() => {
+          if (userData.isAdmin && userData.role === 'admin') {
+            window.location.href = '/admin';
+          } else {
+            window.location.href = '/user/pages/CreatorDashboard';
+          }
+        }, 1500);
+      } else {
+        setSubmitMessage({
+          type: 'error',
+          text: response.message || 'Invalid credentials'
+        });
       }
+    } catch (error: any) {
+      console.error('Signin error:', error);
+      
+      // Handle specific error cases
+      if (error.response?.status === 401) {
+        setSubmitMessage({
+          type: 'error',
+          text: 'Invalid email/username or password'
+        });
+      } else if (error.response?.data?.message) {
+        setSubmitMessage({
+          type: 'error',
+          text: error.response.data.message
+        });
+      } else {
+        setSubmitMessage({
+          type: 'error',
+          text: 'Network error. Please check your connection.'
+        });
+      }
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }
+};
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -337,6 +337,8 @@ function SignIn() {
               </button>
             </form>
 
+
+
             {/* Sign Up Link */}
             <div className="text-center mt-4">
               <p className="text-gray-400 text-sm">
@@ -456,4 +458,4 @@ function SignIn() {
   )
 }
 
-export default SignIn
+export default SignIn 

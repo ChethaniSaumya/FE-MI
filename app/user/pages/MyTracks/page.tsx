@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import { AdminOnly } from '@/app/components/AdminOnly'
 import { 
   FaMusic, 
   FaEdit, 
@@ -282,6 +283,7 @@ export default function MyTracks() {
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center justify-end gap-2">
+                          {/* View button - visible to everyone */}
                           <button
                             onClick={() => router.push(`/user/pages/Track/${track.id}`)}
                             className="p-2 bg-[#232B43] hover:bg-[#232B43]/80 text-white rounded-lg transition-colors"
@@ -289,25 +291,29 @@ export default function MyTracks() {
                           >
                             <FaEye size={14} />
                           </button>
-                          <button
-                            onClick={() => handleEditTrack(track)}
-                            className="p-2 bg-[#7ED7FF]/20 hover:bg-[#7ED7FF]/30 text-[#7ED7FF] rounded-lg transition-colors"
-                            title="Edit"
-                          >
-                            <FaEdit size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTrack(track.id)}
-                            disabled={deletingId === track.id}
-                            className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors disabled:opacity-50"
-                            title="Delete"
-                          >
-                            {deletingId === track.id ? (
-                              <div className="w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                              <FaTrash size={14} />
-                            )}
-                          </button>
+                          
+                          {/* Edit and Delete buttons - ONLY visible to admins */}
+                          <AdminOnly>
+                            <button
+                              onClick={() => handleEditTrack(track)}
+                              className="p-2 bg-[#7ED7FF]/20 hover:bg-[#7ED7FF]/30 text-[#7ED7FF] rounded-lg transition-colors"
+                              title="Edit"
+                            >
+                              <FaEdit size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTrack(track.id)}
+                              disabled={deletingId === track.id}
+                              className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors disabled:opacity-50"
+                              title="Delete"
+                            >
+                              {deletingId === track.id ? (
+                                <div className="w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin"></div>
+                              ) : (
+                                <FaTrash size={14} />
+                              )}
+                            </button>
+                          </AdminOnly>
                         </div>
                       </td>
                     </tr>

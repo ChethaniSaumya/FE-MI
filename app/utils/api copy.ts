@@ -1,13 +1,13 @@
 import axios from 'axios';
 
 //const API_BASE_URL = 'https://ai-music-backend-73mf.onrender.com/api';
-const API_BASE_URL = 'http://localhost:3001/api';
-const API_URL = 'http://localhost:3001';
+ const API_BASE_URL = 'http://localhost:3001/api';
+ const API_URL ='http://localhost:3001';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json', 
   },
   timeout: 30000, // 30 second timeout
 });
@@ -33,7 +33,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Handle unauthorized access
       localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
       window.location.href = '/user/pages/SignIn';
     }
     return Promise.reject(error);
@@ -73,29 +72,6 @@ export const authAPI = {
     const response = await api.post('/reset-password', data);
     return response.data;
   },
-
-  // New admin-specific auth methods
-  adminLogin: async (credentials: {
-    username: string;
-    password: string;
-  }) => {
-    // Admin login uses the same endpoint but with username
-    const response = await api.post('/signin', {
-      email: credentials.username,
-      password: credentials.password
-    });
-    return response.data;
-  },
-
-  logout: () => {
-    // Clear all auth data
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    sessionStorage.clear();
-    // Clear cookie
-    document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    document.cookie = 'authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-  }
 };
 
 export const profileAPI = {
@@ -135,10 +111,6 @@ export const userAPI = {
     password: string;
     phone?: string;
     profilePicture?: string;
-    role?: string; // New field for role
-    isAdmin?: boolean; // New field for admin status
-    isCreator?: boolean; // New field for creator status
-    isBuyer?: boolean; // New field for buyer status
   }) => {
     const response = await api.post('/users', userData);
     return response.data;
@@ -152,10 +124,6 @@ export const userAPI = {
     location?: string;
     country?: string;
     biography?: string;
-    role?: string;
-    isAdmin?: boolean;
-    isCreator?: boolean;
-    isBuyer?: boolean;
   }) => {
     const response = await api.put(`/users/${id}`, userData);
     return response.data;
@@ -165,34 +133,6 @@ export const userAPI = {
     const response = await api.delete(`/users/${id}`);
     return response.data;
   },
-
-  // New admin management methods
-  getAdmins: async () => {
-    const response = await api.get('/admin/admins');
-    return response.data;
-  },
-
-  createAdmin: async (adminData: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    username: string;
-    password: string;
-    role?: string;
-  }) => {
-    const response = await api.post('/admin/admins', adminData);
-    return response.data;
-  },
-
-  updateUserRole: async (id: string, roleData: {
-    role?: string;
-    isAdmin?: boolean;
-    isCreator?: boolean;
-    isBuyer?: boolean;
-  }) => {
-    const response = await api.put(`/admin/users/${id}/role`, roleData);
-    return response.data;
-  }
 };
 
 export const trackAPI = {
@@ -659,85 +599,27 @@ export const downloadAPI = {
 };
 
 // Stripe Connect APIs
+// Stripe Connect APIs
 export const stripeConnectAPI = {
-  createAccount: async (userId: string) => {
-    const response = await axios.post(`${API_URL}/api/stripe/connect/create`, { userId });
-    return response.data;
-  },
+    createAccount: async (userId: string) => {
+        const response = await axios.post(`${API_URL}/api/stripe/connect/create`, { userId });
+        return response.data;
+    },
 
-  getOnboardingLink: async (userId: string) => {
-    const response = await axios.post(`${API_URL}/api/stripe/connect/onboarding`, { userId });
-    return response.data;
-  },
+    getOnboardingLink: async (userId: string) => {
+        const response = await axios.post(`${API_URL}/api/stripe/connect/onboarding`, { userId });
+        return response.data;
+    },
 
-  getStatus: async (userId: string) => {
-    const response = await axios.get(`${API_URL}/api/stripe/connect/status/${userId}`);
-    return response.data;
-  },
+    getStatus: async (userId: string) => {
+        const response = await axios.get(`${API_URL}/api/stripe/connect/status/${userId}`);
+        return response.data;
+    },
 
-  getDashboardLink: async (userId: string) => {
-    const response = await axios.post(`${API_URL}/api/stripe/connect/dashboard`, { userId });
-    return response.data;
-  }
-};
-
-// Dashboard API
-export const dashboardAPI = {
-  getDashboardData: async () => {
-    const response = await api.get('/dashboard-data');
-    return response.data;
-  }
-};
-
-// Helper function to get user role
-export const getUserRole = () => {
-  const userData = localStorage.getItem('user');
-  if (!userData) return null;
-  
-  try {
-    const user = JSON.parse(userData);
-    return {
-      role: user.role || 'user',
-      isAdmin: user.isAdmin || false,
-      isCreator: user.isCreator || false,
-      isBuyer: user.isBuyer || true
-    };
-  } catch (error) {
-    console.error('Error parsing user data:', error);
-    return null;
-  }
-};
-
-// Helper function to check if user is admin
-export const isAdmin = () => {
-  const role = getUserRole();
-  return role?.isAdmin && role?.role === 'admin';
-};
-
-// Helper function to check if user is creator
-export const isCreator = () => {
-  const role = getUserRole();
-  return role?.isCreator || false;
-};
-
-// Helper function to check if user is buyer
-export const isBuyer = () => {
-  const role = getUserRole();
-  return role?.isBuyer || true;
-};
-
-// Helper function to get user ID
-export const getUserId = () => {
-  const userData = localStorage.getItem('user');
-  if (!userData) return null;
-  
-  try {
-    const user = JSON.parse(userData);
-    return user.id || null;
-  } catch (error) {
-    console.error('Error parsing user ID:', error);
-    return null;
-  }
+    getDashboardLink: async (userId: string) => {
+        const response = await axios.post(`${API_URL}/api/stripe/connect/dashboard`, { userId });
+        return response.data;
+    }
 };
 
 export default api;

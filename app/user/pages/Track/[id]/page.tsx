@@ -529,7 +529,7 @@ export default function TrackDetail() {
                 </button>
               </div>
 
-              {/* Additional Actions */}
+              {/* Additional Actions 
               <div className="flex items-center justify-center gap-4 mt-6 pt-4 border-t border-[#232B43]">
                 <button className="p-3 bg-[#232B43] hover:bg-[#232B43]/80 rounded-lg text-gray-400 hover:text-white transition-colors">
                   <FaHeart />
@@ -537,7 +537,7 @@ export default function TrackDetail() {
                 <button className="p-3 bg-[#232B43] hover:bg-[#232B43]/80 rounded-lg text-gray-400 hover:text-white transition-colors">
                   <FaShare />
                 </button>
-              </div>
+              </div>*/}
             </div>
           </div>
         </div>

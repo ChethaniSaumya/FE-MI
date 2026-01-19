@@ -401,11 +401,11 @@ function Navbar() {
                                     <img src={Music.src} className="h-4" alt="Track" />
                                     <span className="font-roboto font-light-300">Track</span>
                                 </a>
-                                <a href="/user/pages/SoundsKit" className={`flex items-center space-x-3 hover:bg-white/10 rounded-lg p-2 transition-colors ${pathname === '/user/pages/SoundsKit' ? 'text-primary font-semibold' : 'text-white'
+                                {/*<a href="/user/pages/SoundsKit" className={`flex items-center space-x-3 hover:bg-white/10 rounded-lg p-2 transition-colors ${pathname === '/user/pages/SoundsKit' ? 'text-primary font-semibold' : 'text-white'
                                     }`}>
                                     <img src={Musicians.src} className="h-4" alt="Sounds Kits" />
                                     <span className="font-roboto font-light-300">Sounds Kits</span>
-                                </a>
+                                </a>*/}
                                 <a href="/user/pages/Musicians" className={`flex items-center space-x-3 hover:bg-white/10 rounded-lg p-2 transition-colors ${pathname === '/user/pages/Musicians' ? 'text-primary font-semibold' : 'text-white'
                                     }`}>
                                     <img src={Sounds.src} className="h-4" alt="Musicians" />

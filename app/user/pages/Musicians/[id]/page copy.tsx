@@ -27,7 +27,7 @@ interface Track {
     trackPrice: number;
     trackImage: string;
     trackFile?: string;
-    genreCategory?: string | string[];  // ADD THIS LINE
+    genreCategory?: string;
     bpm?: number;
     key?: string;
     mood?: string;
@@ -38,16 +38,16 @@ interface Track {
 const MusicianProfilePage = () => {
     const params = useParams();
     const musicianId = params.id as string;
-
+    
     console.log('Page params:', params);
     console.log('Musician ID from params:', musicianId);
-
+    
     const [musician, setMusician] = useState<Musician | null>(null);
     const [tracks, setTracks] = useState<Track[]>([]);
     const [genres, setGenres] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
+    
     // Audio player state
     const [currentPlayingTrack, setCurrentPlayingTrack] = useState<string | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -82,51 +82,15 @@ const MusicianProfilePage = () => {
 
     // Helper function to get genre name from track genreCategory
     const getTrackGenreName = (genreCategory?: string | string[]) => {
-        if (!genreCategory) return 'Unknown Genre';
-
-        console.log('Getting genre for:', genreCategory, 'Genres available:', genres.length);
-
+        if (!genreCategory || !genres.length) return 'Unknown Genre';
+        
         if (Array.isArray(genreCategory)) {
-            // Handle array of genre IDs or names
-            const genreNames = genreCategory.map(item => {
-                // Check if it's already a name
-                if (typeof item !== 'string') return 'Unknown Genre';
-
-                // First check if it's in our genres list by id
-                const genreById = genres.find(g => g._id === item || g.id === item);
-                if (genreById) return genreById.name;
-
-                // Check if it's already a name
-                const genreByName = genres.find(g => g.name === item);
-                if (genreByName) return genreByName.name;
-
-                // Check if it contains a genre name
-                if (item.length > 24 || !/^[0-9a-fA-F]{24}$/.test(item)) {
-                    return item; // Probably already a name
-                }
-
-                return 'Unknown Genre';
-            }).filter(name => name !== 'Unknown Genre');
-
+            // Handle array of genre IDs
+            const genreNames = genreCategory.map(id => getGenreName(id)).filter(name => name !== 'Unknown Genre');
             return genreNames.length > 0 ? genreNames.join(', ') : 'Unknown Genre';
         } else {
-            // Handle single genre ID or name
-            const item = genreCategory;
-
-            // Check if it's in our genres list by id
-            const genreById = genres.find(g => g._id === item || g.id === item);
-            if (genreById) return genreById.name;
-
-            // Check if it's already a name
-            const genreByName = genres.find(g => g.name === item);
-            if (genreByName) return genreByName.name;
-
-            // Check if it's already a name format
-            if (item.length > 24 || !/^[0-9a-fA-F]{24}$/.test(item)) {
-                return item; // Probably already a name
-            }
-
-            return 'Unknown Genre';
+            // Handle single genre ID
+            return getGenreName(genreCategory);
         }
     };
 
@@ -159,22 +123,22 @@ const MusicianProfilePage = () => {
             // Create new audio element for the selected track
             const newAudio = new Audio(track.trackFile);
             newAudio.preload = 'metadata';
-
+            
             // Set up event listeners
             newAudio.addEventListener('loadstart', () => {
                 console.log('Loading track:', track.trackName);
             });
-
+            
             newAudio.addEventListener('canplay', () => {
                 console.log('Track ready to play:', track.trackName);
             });
-
+            
             newAudio.addEventListener('ended', () => {
                 setIsPlaying(false);
                 setCurrentPlayingTrack(null);
                 setAudioElement(null);
             });
-
+            
             newAudio.addEventListener('error', (e) => {
                 console.error('Audio error:', e);
                 alert('Failed to load track for preview');
@@ -188,7 +152,7 @@ const MusicianProfilePage = () => {
             setAudioElement(newAudio);
             newAudio.play();
             setIsPlaying(true);
-
+            
         } catch (error) {
             console.error('Play error:', error);
             alert('Failed to play track');
@@ -205,9 +169,9 @@ const MusicianProfilePage = () => {
 
             // Create a filename from track name
             const fileName = `${track.trackName.replace(/[^a-zA-Z0-9]/g, '_')}.mp3`;
-
+            
             const result = await downloadAPI.downloadFile(track.trackFile, fileName);
-
+            
             if (result.success) {
                 console.log('Download started successfully');
             } else {
@@ -224,7 +188,7 @@ const MusicianProfilePage = () => {
         try {
             // Create a shareable link for the track
             const trackUrl = `${window.location.origin}/user/pages/topcharts?track=${encodeURIComponent(track.trackName || track._id)}`;
-
+            
             if (navigator.share) {
                 // Use native share API if available
                 await navigator.share({
@@ -261,45 +225,25 @@ const MusicianProfilePage = () => {
                 // Load genres first
                 const genresResponse = await genreAPI.getGenres();
                 if (genresResponse?.success) {
-                    console.log('Genres loaded:', genresResponse.genres);
                     setGenres(genresResponse.genres || []);
-                } else {
-                    console.error('Failed to load genres');
                 }
 
                 // Load musician details
                 const musicianResponse = await musicianAPI.getMusician(musicianId);
                 console.log('Musician API response:', musicianResponse);
-
+                
                 if (musicianResponse?.success) {
                     setMusician(musicianResponse.musician);
-
+                    
                     // Load all tracks for this musician
                     const tracksResponse = await trackAPI.getTracks();
                     console.log('Tracks API response:', tracksResponse);
-
+                    
                     if (tracksResponse?.success && tracksResponse.tracks) {
-                        const musicianTracks = tracksResponse.tracks.filter((track: Track) => {
-                            if (!track.musician) return false;
-
-                            // More flexible matching
-                            const trackMusician = track.musician.toLowerCase().trim();
-                            const musicianName = musicianResponse.musician.name.toLowerCase().trim();
-
-                            // Try exact match first
-                            if (trackMusician === musicianName) return true;
-
-                            // Try partial match (if musician name has variations)
-                            return trackMusician.includes(musicianName) || musicianName.includes(trackMusician);
-                        });
-
+                        const musicianTracks = tracksResponse.tracks.filter((track: Track) => 
+                            track.musician && track.musician.toLowerCase() === musicianResponse.musician.name.toLowerCase()
+                        );
                         console.log('Filtered tracks for musician:', musicianTracks);
-
-                        // Log genre information for debugging - with proper typing
-                        musicianTracks.forEach((track: Track) => {
-                            console.log(`Track: ${track.trackName}, GenreCategory:`, track.genreCategory);
-                        });
-
                         setTracks(musicianTracks);
                     }
                 } else {
@@ -382,7 +326,7 @@ const MusicianProfilePage = () => {
             `}</style>
 
             <Navbar />
-
+            
             <div className='containerpaddin container mx-auto pt-34 sm:pt-28 md:pt-32 lg:pt-50 xl:pt-50'>
                 {/* Back Button */}
                 <div className="mb-6">
@@ -404,9 +348,9 @@ const MusicianProfilePage = () => {
                         <div className="relative group">
                             <div className="w-24 h-24 rounded-full flex items-center justify-center relative overflow-hidden ring-4 ring-white/20 group-hover:ring-primary/40 transition-all duration-300">
                                 {musician.profilePicture ? (
-                                    <img
-                                        src={getImageUrl(musician.profilePicture)}
-                                        alt={musician.name}
+                                    <img 
+                                        src={getImageUrl(musician.profilePicture)} 
+                                        alt={musician.name} 
                                         className="w-full h-full rounded-full object-cover transition-all duration-300 group-hover:scale-110"
                                     />
                                 ) : (
@@ -426,7 +370,7 @@ const MusicianProfilePage = () => {
                             <h1 className="text-3xl lg:text-4xl font-bold text-white mb-3">
                                 {musician.name}
                             </h1>
-
+                            
                             {/* Compact Stats Row */}
                             <div className="flex flex-wrap justify-center lg:justify-start gap-3 mb-3">
                                 <div className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-2">
@@ -491,26 +435,26 @@ const MusicianProfilePage = () => {
                     {tracks.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {tracks.map((track, index) => (
-                                <div
-                                    key={track._id}
+                                <div 
+                                    key={track._id} 
                                     className="bg-white/10 backdrop-blur-md rounded-xl p-4 hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-white/30 group border border-white/20"
                                 >
                                     {/* Track Image */}
                                     <div className="relative mb-4">
                                         <div className="w-full aspect-square overflow-hidden rounded-lg bg-black/20">
-                                            <img
-                                                src={getImageUrl(track.trackImage)}
-                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                                                alt={track.trackName}
+                                            <img 
+                                                src={getImageUrl(track.trackImage)} 
+                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
+                                                alt={track.trackName} 
                                                 onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/vercel.svg'; }}
                                             />
                                         </div>
-
+                                        
                                         {/* Track Number Badge */}
                                         <div className="absolute top-2 left-2 bg-primary text-black text-xs font-bold px-2 py-1 rounded-full">
                                             #{index + 1}
                                         </div>
-
+                                        
                                         {/* Play Button Overlay */}
                                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg flex items-center justify-center">
                                             <button
@@ -526,7 +470,7 @@ const MusicianProfilePage = () => {
                                             </button>
                                         </div>
                                     </div>
-
+                                    
                                     {/* Track Info */}
                                     <div className="space-y-3">
                                         <div>
@@ -537,13 +481,13 @@ const MusicianProfilePage = () => {
                                                 by {track.musician}
                                             </p>
                                         </div>
-
+                                        
                                         {/* Track Details */}
                                         <div className="flex items-center justify-between text-xs text-gray-500">
                                             <span>Genre: {getTrackGenreName(track.genreCategory)}</span>
                                             <span>BPM: {track.bpm || 'N/A'}</span>
                                         </div>
-
+                                        
                                         {/* Price and Actions */}
                                         <div className="flex items-center gap-3 pt-2">
                                             <div className="flex-1">
@@ -552,22 +496,22 @@ const MusicianProfilePage = () => {
                                                 </div>
                                                 <div className="text-gray-400 text-xs">Price</div>
                                             </div>
-
+                                            
                                             <div className="flex gap-2">
-                                                <button
+                                                <button 
                                                     onClick={() => handleShare(track)}
                                                     className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg transition-colors"
                                                     title="Share Track"
                                                 >
                                                     <FaShare className="w-4 h-4" />
                                                 </button>
-                                                <button
-                                                    onClick={() => handleDownload(track)}
-                                                    className="bg-primary hover:bg-primary/80 text-black px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
-                                                >
-                                                    <MdDownload className="w-5 h-5" />
-                                                    Download
-                                                </button>
+                                               <button 
+                                                   onClick={() => handleDownload(track)}
+                                                   className="bg-primary hover:bg-primary/80 text-black px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                                               >
+                                                   <MdDownload className="w-5 h-5" />
+                                                   Download
+                                               </button>
                                             </div>
                                         </div>
                                     </div>
