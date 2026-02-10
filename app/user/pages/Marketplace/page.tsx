@@ -74,9 +74,22 @@ export default function Marketplace() {
     fetchTracks();
   }, []);
 
+  // FIX #1: Auto-fetch when page, sort, or genre changes
   useEffect(() => {
     fetchTracks();
   }, [currentPage, sortBy, selectedGenre]);
+
+  // FIX #2: Auto-fetch when price range changes (optional - uncomment if you want instant filtering)
+  useEffect(() => {
+    if (priceRange.min || priceRange.max) {
+      // Add a small delay to avoid too many API calls while typing
+      const debounceTimer = setTimeout(() => {
+        setCurrentPage(1);
+        fetchTracks();
+      }, 500);
+      return () => clearTimeout(debounceTimer);
+    }
+  }, [priceRange.min, priceRange.max]);
 
   // Fetch cart items to track which tracks are already in cart
   const fetchCartItems = async (userId: string) => {
@@ -114,7 +127,12 @@ export default function Marketplace() {
       });
 
       if (searchQuery) params.append('search', searchQuery);
-      if (selectedGenre) params.append('genre', selectedGenre);
+      
+      // Send genre ID (database stores IDs, not names)
+      if (selectedGenre) {
+        params.append('genre', selectedGenre);
+      }
+      
       if (priceRange.min) params.append('minPrice', priceRange.min);
       if (priceRange.max) params.append('maxPrice', priceRange.max);
 
@@ -212,12 +230,14 @@ export default function Marketplace() {
     router.push(`/user/pages/Track/${trackId}`);
   };
 
+  // FIX #3: Clear filters function
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedGenre('');
     setPriceRange({ min: '', max: '' });
     setSortBy('newest');
     setCurrentPage(1);
+    // Fetch will be triggered automatically by useEffect
   };
 
   const TrackCard = ({ track }: { track: Track }) => {
@@ -280,7 +300,6 @@ export default function Marketplace() {
             </span>
           </div>
 
-
           {/* Track Info */}
           <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
             {track.bpm && <span>{track.bpm} BPM</span>}
@@ -288,7 +307,7 @@ export default function Marketplace() {
             {track.moodType && <span>{track.moodType}</span>}
           </div>
 
-          {/* Actions - Removed heart button, full width Add to Cart */}
+          {/* Actions - Full width Add to Cart */}
           <button
             onClick={() => handleAddToCart(track)}
             disabled={isInCart || isAdding}
@@ -374,6 +393,16 @@ export default function Marketplace() {
             >
               Search
             </button>
+
+            {/* FIX #4: Clear Filters Button */}
+            <button
+              onClick={clearFilters}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center gap-2"
+              title="Clear all filters"
+            >
+              <FaTimes />
+              Clear
+            </button>
           </div>
 
           {/* Filter Panel */}
@@ -425,6 +454,12 @@ export default function Marketplace() {
         <div className="mb-6">
           <p className="text-gray-400">
             Showing <span className="text-white font-semibold">{tracks.length}</span> of <span className="text-white font-semibold">{totalTracks}</span> tracks
+            {/* Show active filter indicators */}
+            {(selectedGenre || priceRange.min || priceRange.max || searchQuery) && (
+              <span className="ml-2 text-[#E100FF]">
+                (Filtered)
+              </span>
+            )}
           </p>
         </div>
 

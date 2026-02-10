@@ -14,7 +14,7 @@ import {
   FaShoppingCart,
   FaCheckCircle,
   FaArrowRight,
-  FaStripe
+  FaPaypal
 } from 'react-icons/fa'
 import { MdTrendingUp } from 'react-icons/md'
 
@@ -35,7 +35,6 @@ export default function CreatorDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if user is logged in
     const userData = localStorage.getItem('user');
     if (!userData) {
       router.push('/user/pages/SignIn');
@@ -60,7 +59,6 @@ export default function CreatorDashboard() {
       }
     } catch (err) {
       console.error('Error fetching stats:', err);
-      // Set default stats if API not available yet
       setStats({
         totalTracks: 0,
         totalSales: 0,
@@ -185,7 +183,7 @@ export default function CreatorDashboard() {
           />
         </div>
 
-        {/* Earnings Section - UPDATED: Removed 7-day hold messaging */}
+        {/* Earnings Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
           <div className="lg:col-span-2 bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-2xl p-6 border border-[#232B43]">
             <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
@@ -205,25 +203,24 @@ export default function CreatorDashboard() {
               <div className="bg-black/30 rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <FaCheckCircle className="text-green-400 text-sm" />
-                  <p className="text-gray-400 text-sm">Transferred to Stripe</p>
+                  <p className="text-gray-400 text-sm">Paid via PayPal</p>
                 </div>
                 <p className="text-4xl font-bold text-green-400">
                   ${stats?.totalEarnings?.toFixed(2) || '0.00'}
                 </p>
                 <p className="text-gray-500 text-xs mt-2">
-                  Instant payouts via Stripe Connect
+                  Automatic payouts via PayPal
                 </p>
               </div>
             </div>
             
-            {/* Stripe Connect Info */}
-            <div className="mt-4 p-3 bg-[#635BFF]/10 border border-[#635BFF]/30 rounded-lg flex items-center gap-3">
-              <FaStripe className="text-[#635BFF] text-2xl" />
+            {/* PayPal Payout Info */}
+            <div className="mt-4 p-3 bg-[#0070BA]/10 border border-[#0070BA]/30 rounded-lg flex items-center gap-3">
+              <FaPaypal className="text-[#0070BA] text-2xl" />
               <div>
-                <p className="text-white text-sm font-medium">Instant Transfers via Stripe Connect</p>
+                <p className="text-white text-sm font-medium">Instant Payouts via PayPal</p>
                 <p className="text-gray-400 text-xs">
-                  Your earnings are transferred to your Stripe account immediately after each sale.
-                  Payout timing depends on your Stripe account settings.
+                  Your earnings are sent to your PayPal account automatically after each sale.
                 </p>
               </div>
             </div>
@@ -238,12 +235,8 @@ export default function CreatorDashboard() {
                 <span className="text-white font-semibold">15%</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">Stripe Fee</span>
-                <span className="text-white font-semibold">~2.9% + $0.30</span>
-              </div>
-              <div className="flex items-center justify-between">
                 <span className="text-gray-400">You Receive</span>
-                <span className="text-green-400 font-semibold">~82%</span>
+                <span className="text-green-400 font-semibold">85%</span>
               </div>
               <div className="border-t border-[#232B43] my-4"></div>
               <div className="flex items-center justify-between">
@@ -350,7 +343,7 @@ export default function CreatorDashboard() {
                       <td className="py-3 px-4 text-center">
                         <span className="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400 flex items-center justify-center gap-1">
                           <FaCheckCircle className="text-xs" />
-                          Transferred
+                          Paid
                         </span>
                       </td>
                     </tr>

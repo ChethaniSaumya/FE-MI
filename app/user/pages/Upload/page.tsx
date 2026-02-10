@@ -3,79 +3,58 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { FaMusic, FaImage, FaSpinner, FaCheck, FaTimes, FaStripe, FaExclamationCircle, FaExternalLinkAlt } from 'react-icons/fa';
-import { stripeConnectAPI, genreAPI } from '../../../utils/api';
+import { FaMusic, FaImage, FaSpinner, FaCheck, FaTimes, FaPaypal, FaExclamationCircle } from 'react-icons/fa';
+import { paypalAPI, genreAPI } from '../../../utils/api';
 
-// Stripe Connect Banner Component
-const StripeConnectBanner = ({
+// PayPal Connect Banner Component
+const PayPalConnectBanner = ({
     status,
-    onConnect,
     loading
 }: {
     status: any;
-    onConnect: () => void;
     loading: boolean;
 }) => {
+    const router = useRouter();
+
+    if (loading) return null;
     if (!status) return null;
 
     // Fully connected and ready
-    if (status.connected && status.payoutsEnabled) {
+    if (status.connected && status.onboardingComplete) {
         return (
             <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-6">
                 <div className="flex items-center space-x-3">
                     <FaCheck className="text-green-400 text-xl" />
                     <div>
-                        <p className="text-green-400 font-medium">Stripe Connected</p>
-                        <p className="text-green-400/70 text-sm">You're ready to receive payments for your tracks!</p>
+                        <p className="text-green-400 font-medium">PayPal Connected</p>
+                        <p className="text-green-400/70 text-sm">
+                            Earnings will be sent to: <strong>{status.paypalEmail}</strong>
+                        </p>
                     </div>
                 </div>
             </div>
         );
     }
 
-    // Connected but onboarding incomplete
-    if (status.connected && !status.onboardingComplete) {
-        return (
-            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 mb-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                        <FaExclamationCircle className="text-orange-400 text-xl" />
-                        <div>
-                            <p className="text-orange-400 font-medium">Complete Stripe Setup</p>
-                            <p className="text-orange-400/70 text-sm">Please complete your Stripe account setup to start receiving payments.</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={onConnect}
-                        disabled={loading}
-                        className="px-4 py-2 bg-[#635BFF] hover:bg-[#5851ea] text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
-                    >
-                        {loading ? <FaSpinner className="animate-spin" /> : <FaExternalLinkAlt />}
-                        <span>Continue Setup</span>
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    // Not connected at all
+    // Not connected
     return (
         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
             <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                     <FaExclamationCircle className="text-yellow-400 text-xl" />
                     <div>
-                        <p className="text-yellow-400 font-medium">Stripe Account Required</p>
-                        <p className="text-yellow-400/70 text-sm">You must connect a Stripe account before uploading tracks. This allows you to receive payments directly to your bank account when your tracks are sold.</p>
+                        <p className="text-yellow-400 font-medium">PayPal Account Required</p>
+                        <p className="text-yellow-400/70 text-sm">
+                            You must connect your PayPal email before uploading tracks. Go to your profile settings to set it up.
+                        </p>
                     </div>
                 </div>
                 <button
-                    onClick={onConnect}
-                    disabled={loading}
-                    className="px-4 py-2 bg-[#635BFF] hover:bg-[#5851ea] text-white rounded-lg font-medium transition-colors flex items-center space-x-2 whitespace-nowrap"
+                    onClick={() => router.push('/user/pages/UserProfile?tab=payments')}
+                    className="px-4 py-2 bg-[#0070BA] hover:bg-[#005ea6] text-white rounded-lg font-medium transition-colors flex items-center space-x-2 whitespace-nowrap"
                 >
-                    {loading ? <FaSpinner className="animate-spin" /> : <FaStripe className="text-xl" />}
-                    <span>Connect Stripe</span>
+                    <FaPaypal className="text-xl" />
+                    <span>Connect PayPal</span>
                 </button>
             </div>
         </div>
@@ -92,22 +71,20 @@ function Upload() {
     const genreDropdownRef = useRef<HTMLDivElement>(null);
 
     const [user, setUser] = useState<any>(null);
-    const [stripeStatus, setStripeStatus] = useState<any>(null);
-    const [stripeLoading, setStripeLoading] = useState(true);
-    const [connectLoading, setConnectLoading] = useState(false);
+    const [paypalStatus, setPaypalStatus] = useState<any>(null);
+    const [paypalLoading, setPaypalLoading] = useState(true);
 
     const [audioFile, setAudioFile] = useState<File | null>(null);
     const [audioPreview, setAudioPreview] = useState<string | null>(null);
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-    // Genre selection state - FETCH FROM ADMIN PANEL
+    // Genre selection state
     const [availableGenres, setAvailableGenres] = useState<{ id: string, name: string }[]>([]);
     const [genresLoading, setGenresLoading] = useState(false);
     const [showGenreDropdown, setShowGenreDropdown] = useState(false);
     const [genreSearchQuery, setGenreSearchQuery] = useState('');
 
-    // UPDATED: All key options from Track Management
     const trackKeyOptions = [
         "None", "Cm", "Dm", "Em", "Fm", "Gm", "Bm", "F♯m", "Am", "C♯m", "D♯m", "G♯m", "A♯m", "E♭m", "CM", "B♭m", "DM", "A♭m", "GM", "EM", "AM", "FM", "BM", "F♯M", "D♭m", "E♭M", "A♭M", "C♯M", "D♭M", "B♭M", "A♯M", "G♭M", "C♭M", "D♯M", "G♯M"
     ];
@@ -159,7 +136,7 @@ function Upload() {
         loadGenres();
     }, []);
 
-    // Check authentication
+    // Check authentication and PayPal status
     useEffect(() => {
         const userData = localStorage.getItem('user');
         if (!userData) {
@@ -168,7 +145,7 @@ function Upload() {
         }
         const userInfo = JSON.parse(userData);
         setUser(userInfo);
-        checkStripeStatus(userInfo.id);
+        checkPayPalStatus(userInfo.id);
     }, []);
 
     // Close dropdown when clicking outside
@@ -185,42 +162,16 @@ function Upload() {
         };
     }, []);
 
-    const checkStripeStatus = async (userId: string) => {
+    const checkPayPalStatus = async (userId: string) => {
         try {
-            setStripeLoading(true);
-            const response = await stripeConnectAPI.getStatus(userId);
-            setStripeStatus(response);
+            setPaypalLoading(true);
+            const response = await paypalAPI.getStatus(userId);
+            setPaypalStatus(response);
         } catch (error) {
-            console.error('Error checking Stripe status:', error);
-            setStripeStatus({ connected: false });
+            console.error('Error checking PayPal status:', error);
+            setPaypalStatus({ connected: false, onboardingComplete: false });
         } finally {
-            setStripeLoading(false);
-        }
-    };
-
-    const handleConnectStripe = async () => {
-        if (!user) return;
-
-        try {
-            setConnectLoading(true);
-
-            if (!stripeStatus?.connected) {
-                await stripeConnectAPI.createAccount(user.id);
-            }
-
-            const response = await stripeConnectAPI.getOnboardingLink(user.id);
-
-            if (response.success && response.url) {
-                window.location.href = response.url;
-            }
-        } catch (error) {
-            console.error('Error connecting Stripe:', error);
-            setSubmitMessage({
-                type: 'error',
-                text: 'Failed to connect Stripe. Please try again.'
-            });
-        } finally {
-            setConnectLoading(false);
+            setPaypalLoading(false);
         }
     };
 
@@ -293,7 +244,6 @@ function Upload() {
         }));
     };
 
-    // Get genre name by ID
     const getGenreName = (genreId: string) => {
         const genre = availableGenres.find(g => g.id === genreId);
         return genre ? genre.name : genreId;
@@ -303,34 +253,27 @@ function Upload() {
         genre.name.toLowerCase().includes(genreSearchQuery.toLowerCase())
     );
 
-    // Calculate earnings with Stripe fee deduction
-    const calculateEarnings = (price: string) => {
-        const priceNum = parseFloat(price) || 0;
-
-        // Platform fee: 15%
-        const platformFee = (priceNum * PLATFORM_FEE_PERCENT) / 100;
-
-        // Stripe fee: 2.9% + $0.30
-        const stripeFee = (priceNum * 0.029) + 0.30;
-
-        // Seller earnings = Price - Platform Fee - Stripe Fee
-        const earnings = priceNum - platformFee - stripeFee;
-
+    // Fixed: accepts string or number, parses to number internally
+    const calculateEarnings = (priceInput: string | number) => {
+        const price = typeof priceInput === 'string' ? parseFloat(priceInput) || 0 : priceInput;
+        const platformFee = price * 0.15;
+        const paypalFee = price > 0 ? (price * 0.0349 + 0.49) : 0;
+        const earnings = price - platformFee - paypalFee;
         return {
-            price: priceNum,
-            platformFee: Math.round(platformFee * 100) / 100,
-            stripeFee: Math.round(stripeFee * 100) / 100,
-            earnings: Math.round(earnings * 100) / 100
+            price,
+            platformFee,
+            paypalFee,
+            earnings: Math.max(0, earnings)
         };
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!stripeStatus?.connected || !stripeStatus?.payoutsEnabled) {
+        if (!paypalStatus?.connected || !paypalStatus?.onboardingComplete) {
             setSubmitMessage({
                 type: 'error',
-                text: 'You must connect your Stripe account before uploading tracks.'
+                text: 'You must connect your PayPal account before uploading tracks.'
             });
             return;
         }
@@ -410,7 +353,7 @@ function Upload() {
         }
     };
 
-    if (stripeLoading) {
+    if (paypalLoading) {
         return (
             <div className="min-h-screen">
                 <Navbar />
@@ -424,10 +367,9 @@ function Upload() {
         );
     }
 
-    const canUpload = stripeStatus?.connected && stripeStatus?.payoutsEnabled;
+    const canUpload = paypalStatus?.connected && paypalStatus?.onboardingComplete;
     const isButtonDisabled = isLoading || uploadSuccess || !canUpload;
 
-    // Common input class - dark blue background
     const inputClass = "w-full bg-[#1a1f35] border border-white/20 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#E100FF] disabled:opacity-50";
     const selectClass = "w-full bg-[#1a1f35] border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#E100FF] disabled:opacity-50";
 
@@ -443,11 +385,10 @@ function Upload() {
                         <p className="text-gray-400 mt-1">Upload your track and start selling on Museedle</p>
                     </div>
 
-                    {/* Stripe Connect Banner */}
-                    <StripeConnectBanner
-                        status={stripeStatus}
-                        onConnect={handleConnectStripe}
-                        loading={connectLoading}
+                    {/* PayPal Connect Banner */}
+                    <PayPalConnectBanner
+                        status={paypalStatus}
+                        loading={paypalLoading}
                     />
 
                     {/* Upload Form */}
@@ -464,8 +405,7 @@ function Upload() {
                                     </h3>
                                     <div
                                         onClick={() => !uploadSuccess && audioInputRef.current?.click()}
-                                        className={`border-2 border-dashed border-white/30 rounded-lg p-8 text-center transition-colors ${uploadSuccess ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-[#E100FF]/50'
-                                            }`}
+                                        className={`border-2 border-dashed border-white/30 rounded-lg p-8 text-center transition-colors ${uploadSuccess ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-[#E100FF]/50'}`}
                                     >
                                         {audioPreview ? (
                                             <div className="space-y-2">
@@ -499,8 +439,7 @@ function Upload() {
                                     </h3>
                                     <div
                                         onClick={() => !uploadSuccess && imageInputRef.current?.click()}
-                                        className={`border-2 border-dashed border-white/30 rounded-lg p-8 text-center transition-colors ${uploadSuccess ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-[#E100FF]/50'
-                                            }`}
+                                        className={`border-2 border-dashed border-white/30 rounded-lg p-8 text-center transition-colors ${uploadSuccess ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-[#E100FF]/50'}`}
                                     >
                                         {imagePreview ? (
                                             <img src={imagePreview} alt="Cover" className="max-h-32 mx-auto rounded" />
@@ -527,7 +466,6 @@ function Upload() {
                             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
                                 <h3 className="text-white font-medium mb-4">Track Details</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* Track Name */}
                                     <div>
                                         <label className="text-gray-300 text-sm mb-1 block">Track Name *</label>
                                         <input
@@ -541,8 +479,6 @@ function Upload() {
                                             disabled={uploadSuccess}
                                         />
                                     </div>
-
-                                    {/* BPM */}
                                     <div>
                                         <label className="text-gray-300 text-sm mb-1 block">BPM</label>
                                         <input
@@ -555,8 +491,6 @@ function Upload() {
                                             disabled={uploadSuccess}
                                         />
                                     </div>
-
-                                    {/* Key - UPDATED WITH ALL OPTIONS */}
                                     <div>
                                         <label className="text-gray-300 text-sm mb-1 block">Key</label>
                                         <select
@@ -570,8 +504,6 @@ function Upload() {
                                             {trackKeyOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                         </select>
                                     </div>
-
-                                    {/* Mood */}
                                     <div>
                                         <label className="text-gray-300 text-sm mb-1 block">Mood</label>
                                         <select
@@ -585,8 +517,6 @@ function Upload() {
                                             {moodOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                         </select>
                                     </div>
-
-                                    {/* Energy Level */}
                                     <div>
                                         <label className="text-gray-300 text-sm mb-1 block">Energy Level</label>
                                         <select
@@ -623,10 +553,8 @@ function Upload() {
                                                 </svg>
                                             </button>
 
-                                            {/* Genre Dropdown */}
                                             {showGenreDropdown && !uploadSuccess && (
                                                 <div className="absolute z-[100] w-full mt-1 bg-[#1a1f35] border border-white/20 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-                                                    {/* Search Input */}
                                                     <div className="p-2 border-b border-white/10 sticky top-0 bg-[#1a1f35] z-[101]">
                                                         <input
                                                             type="text"
@@ -637,8 +565,6 @@ function Upload() {
                                                             onClick={(e) => e.stopPropagation()}
                                                         />
                                                     </div>
-
-                                                    {/* Genre Options */}
                                                     <div className="p-2">
                                                         {filteredGenres.length > 0 ? (
                                                             filteredGenres.map((genre) => {
@@ -668,7 +594,6 @@ function Upload() {
                                             )}
                                         </div>
 
-                                        {/* Selected Genres Display */}
                                         {formData.genreCategory.length > 0 && (
                                             <div className="mt-3 flex flex-wrap gap-2">
                                                 {formData.genreCategory.map((genreId) => (
@@ -713,7 +638,7 @@ function Upload() {
                                 <h3 className="text-white font-medium mb-2">Pricing</h3>
                                 <p className="text-gray-400 text-sm mb-4">
                                     Set your base price. Commercial and Exclusive prices are calculated automatically.
-                                    Platform fee is {PLATFORM_FEE_PERCENT}% and Stripe processing fee (2.9% + $0.30) is deducted from your earnings.
+                                    Platform fee is {PLATFORM_FEE_PERCENT}% and PayPal processing fee (~3.49% + $0.49) is deducted from your earnings.
                                 </p>
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -746,8 +671,8 @@ function Upload() {
                                                     <span>-${calculateEarnings(formData.trackPrice).platformFee.toFixed(2)}</span>
                                                 </div>
                                                 <div className="flex justify-between text-red-400">
-                                                    <span>Stripe Fee (2.9% + $0.30)</span>
-                                                    <span>-${calculateEarnings(formData.trackPrice).stripeFee.toFixed(2)}</span>
+                                                    <span>PayPal Fee (~3.49% + $0.49)</span>
+                                                    <span>-${calculateEarnings(formData.trackPrice).paypalFee.toFixed(2)}</span>
                                                 </div>
                                                 <div className="flex justify-between text-green-400 font-medium border-t border-white/10 pt-1 mt-1">
                                                     <span>You Earn</span>
@@ -781,8 +706,8 @@ function Upload() {
                                                     <span>-${calculateEarnings(formData.commercialPrice).platformFee.toFixed(2)}</span>
                                                 </div>
                                                 <div className="flex justify-between text-red-400">
-                                                    <span>Stripe Fee (2.9% + $0.30)</span>
-                                                    <span>-${calculateEarnings(formData.commercialPrice).stripeFee.toFixed(2)}</span>
+                                                    <span>PayPal Fee (~3.49% + $0.49)</span>
+                                                    <span>-${calculateEarnings(formData.commercialPrice).paypalFee.toFixed(2)}</span>
                                                 </div>
                                                 <div className="flex justify-between text-green-400 font-medium border-t border-white/10 pt-1 mt-1">
                                                     <span>You Earn</span>
@@ -816,8 +741,8 @@ function Upload() {
                                                     <span>-${calculateEarnings(formData.exclusivePrice).platformFee.toFixed(2)}</span>
                                                 </div>
                                                 <div className="flex justify-between text-red-400">
-                                                    <span>Stripe Fee (2.9% + $0.30)</span>
-                                                    <span>-${calculateEarnings(formData.exclusivePrice).stripeFee.toFixed(2)}</span>
+                                                    <span>PayPal Fee (~3.49% + $0.49)</span>
+                                                    <span>-${calculateEarnings(formData.exclusivePrice).paypalFee.toFixed(2)}</span>
                                                 </div>
                                                 <div className="flex justify-between text-green-400 font-medium border-t border-white/10 pt-1 mt-1">
                                                     <span>You Earn</span>
@@ -863,8 +788,8 @@ function Upload() {
                             {/* Submit Message */}
                             {submitMessage && (
                                 <div className={`p-4 rounded-lg flex items-center space-x-2 ${submitMessage.type === 'success'
-                                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                        : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                    : 'bg-red-500/20 text-red-400 border border-red-500/30'
                                     }`}>
                                     {submitMessage.type === 'success' ? <FaCheck /> : <FaTimes />}
                                     <span>{submitMessage.text}</span>
@@ -876,8 +801,8 @@ function Upload() {
                                 type="submit"
                                 disabled={isButtonDisabled}
                                 className={`w-full py-3 rounded-lg font-semibold transition-colors ${isButtonDisabled
-                                        ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                                        : 'bg-[#E100FF] text-white hover:bg-[#c000dd]'
+                                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                                    : 'bg-[#E100FF] text-white hover:bg-[#c000dd]'
                                     }`}
                             >
                                 {isLoading ? (
@@ -891,7 +816,7 @@ function Upload() {
                                         Uploaded Successfully
                                     </span>
                                 ) : !canUpload ? (
-                                    'Connect Stripe to Upload'
+                                    'Connect PayPal to Upload'
                                 ) : (
                                     'Upload Track'
                                 )}

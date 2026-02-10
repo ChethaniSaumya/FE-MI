@@ -6,12 +6,11 @@ import Footer from '../../components/Footer'
 import {
   FaShoppingCart,
   FaTrash,
-  FaCreditCard,
   FaLock,
   FaCheck,
   FaMusic,
   FaSpinner,
-  FaGlobe
+  FaPaypal
 } from 'react-icons/fa'
 
 interface CartItem {
@@ -42,15 +41,6 @@ const LICENSE_INFO: Record<string, { name: string; color: string }> = {
   exclusive: { name: 'Exclusive', color: 'bg-[#E100FF]/20 text-[#E100FF]' }
 };
 
-// Payment methods by currency - ONLY Card (USD) and Kakao Pay (KRW)
-const PAYMENT_METHODS_BY_CURRENCY: Record<string, string[]> = {
-  usd: ['Credit/Debit Card'],
-  krw: ['Kakao Pay', 'Credit/Debit Card']
-};
-
-// Exchange rate (you can make this dynamic via API)
-const USD_TO_KRW_RATE = 1450;
-
 export default function Cart() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -58,9 +48,6 @@ export default function Cart() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  
-  // Currency state - only USD or KRW (for Kakao Pay)
-  const [currency, setCurrency] = useState<'usd' | 'krw'>('usd');
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -71,12 +58,6 @@ export default function Cart() {
     const parsedUser = JSON.parse(userData);
     setUser(parsedUser);
     fetchCart(parsedUser.id);
-    
-    // Auto-detect Korean users based on browser language
-    const browserLang = navigator.language || '';
-    if (browserLang.toLowerCase().startsWith('ko')) {
-      setCurrency('krw');
-    }
   }, [router]);
 
   const fetchCart = async (userId: string) => {
@@ -96,12 +77,7 @@ export default function Cart() {
     }
   };
 
-  // Format price based on selected currency
   const formatPrice = (priceUSD: number) => {
-    if (currency === 'krw') {
-      const priceKRW = Math.round(priceUSD * USD_TO_KRW_RATE);
-      return `₩${priceKRW.toLocaleString()}`;
-    }
     return `$${priceUSD.toFixed(2)}`;
   };
 
@@ -155,8 +131,7 @@ export default function Cart() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user.id,
-          items,
-          currency: currency
+          items
         })
       });
 
@@ -252,13 +227,13 @@ export default function Cart() {
                               className="bg-[#0A1428] border border-[#232B43] rounded-lg px-3 py-1.5 text-white text-sm focus:border-[#E100FF] focus:outline-none"
                             >
                               <option value="personal">
-                                Personal ({formatPrice(item.track?.trackPrice || 0)})
+                                Personal (${(item.track?.trackPrice || 0).toFixed(2)})
                               </option>
                               <option value="commercial">
-                                Commercial ({formatPrice((item.track?.trackPrice || 0) * 2.5)})
+                                Commercial (${((item.track?.trackPrice || 0) * 2.5).toFixed(2)})
                               </option>
                               <option value="exclusive">
-                                Exclusive ({formatPrice((item.track?.trackPrice || 0) * 10)})
+                                Exclusive (${((item.track?.trackPrice || 0) * 10).toFixed(2)})
                               </option>
                             </select>
                             <span className={`px-2 py-0.5 rounded-full text-xs ${LICENSE_INFO[item.licenseType]?.color || ''}`}>
@@ -270,7 +245,7 @@ export default function Cart() {
                         {/* Price & Remove */}
                         <div className="flex sm:flex-col items-center sm:items-end gap-4">
                           <p className="text-xl font-bold text-white">
-                            {formatPrice(item.price)}
+                            ${item.price.toFixed(2)}
                           </p>
                           <button
                             onClick={() => handleRemoveItem(item.id)}
@@ -304,58 +279,25 @@ export default function Cart() {
               <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-xl border border-[#232B43] p-6 sticky top-24">
                 <h2 className="text-xl font-bold text-white mb-6">Order Summary</h2>
 
-                {/* Currency Selector - Only USD and KRW (Kakao Pay) */}
+                {/* Payment Method - PayPal */}
                 <div className="mb-6 p-4 bg-[#0A1428] rounded-xl border border-[#232B43]">
-                  <div className="flex items-center gap-2 mb-3">
-                    <FaGlobe className="text-[#E100FF]" />
+                  <div className="flex items-center gap-2 mb-2">
                     <span className="text-white font-medium">Payment Method</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* USD - Card Payment */}
-                    <button
-                      onClick={() => setCurrency('usd')}
-                      className={`py-3 px-4 rounded-lg border transition-all text-center ${
-                        currency === 'usd'
-                          ? 'bg-[#E100FF]/20 border-[#E100FF] text-white'
-                          : 'bg-[#101936] border-[#232B43] text-gray-400 hover:border-[#E100FF]/50'
-                      }`}
-                    >
-                      <div className="text-lg font-bold">💳 Card</div>
-                      <div className="text-xs mt-0.5 opacity-70">USD</div>
-                    </button>
-                    
-                    {/* KRW - Kakao Pay */}
-                    <button
-                      onClick={() => setCurrency('krw')}
-                      className={`py-3 px-4 rounded-lg border transition-all text-center ${
-                        currency === 'krw'
-                          ? 'bg-[#FEE500]/20 border-[#FEE500] text-white'
-                          : 'bg-[#101936] border-[#232B43] text-gray-400 hover:border-[#FEE500]/50'
-                      }`}
-                    >
-                      <div className="text-lg font-bold">🟡 카카오페이</div>
-                      <div className="text-xs mt-0.5 opacity-70">KRW</div>
-                    </button>
+                  <div className="flex items-center gap-3 py-2 px-3 bg-[#0070BA]/10 border border-[#0070BA]/30 rounded-lg">
+                    <FaPaypal className="text-[#0070BA] text-xl" />
+                    <span className="text-[#0070BA] font-medium">PayPal</span>
                   </div>
-                  
-                  {/* KRW Notice */}
-                  {currency === 'krw' && (
-                    <div className="mt-3 p-2.5 bg-[#FEE500]/10 border border-[#FEE500]/30 rounded-lg">
-                      <p className="text-[#FEE500] text-xs">
-                        🇰🇷 카카오페이로 간편하게 결제하세요!
-                      </p>
-                      <p className="text-[#FEE500]/70 text-xs mt-1">
-                        Rate: $1 = ₩{USD_TO_KRW_RATE.toLocaleString()}
-                      </p>
-                    </div>
-                  )}
+                  <p className="text-gray-500 text-xs mt-2">
+                    You'll be redirected to PayPal to complete your purchase securely.
+                  </p>
                 </div>
 
                 {/* Summary Lines */}
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-gray-400">
                     <span>Subtotal ({cart.itemCount} items)</span>
-                    <span className="text-white">{formatPrice(cart.subtotal)}</span>
+                    <span className="text-white">${cart.subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-400">
                     <span>Platform Fee (15%)</span>
@@ -364,12 +306,7 @@ export default function Cart() {
                   <div className="border-t border-[#232B43] pt-3">
                     <div className="flex justify-between">
                       <span className="text-white font-semibold">Total</span>
-                      <div className="text-right">
-                        <span className="text-2xl font-bold text-white">{formatPrice(cart.total)}</span>
-                        {currency === 'krw' && (
-                          <p className="text-gray-500 text-xs mt-1">(${cart.total.toFixed(2)} USD)</p>
-                        )}
-                      </div>
+                      <span className="text-2xl font-bold text-white">${cart.total.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -378,26 +315,17 @@ export default function Cart() {
                 <button
                   onClick={handleCheckout}
                   disabled={processing}
-                  className={`w-full py-4 rounded-xl font-semibold transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 ${
-                    currency === 'krw'
-                      ? 'bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90'
-                      : 'bg-gradient-to-r from-[#E100FF] to-[#7C3AED] text-white hover:opacity-90'
-                  }`}
+                  className="w-full py-4 rounded-xl font-semibold transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 bg-[#0070BA] text-white hover:bg-[#005ea6]"
                 >
                   {processing ? (
                     <>
                       <FaSpinner className="animate-spin" />
                       Processing...
                     </>
-                  ) : currency === 'krw' ? (
-                    <>
-                      <span>카카오페이로 결제</span>
-                      <span>{formatPrice(cart.total)}</span>
-                    </>
                   ) : (
                     <>
-                      <FaCreditCard />
-                      Pay {formatPrice(cart.total)}
+                      <FaLock />
+                      Pay with PayPal — ${cart.total.toFixed(2)}
                     </>
                   )}
                 </button>
@@ -405,12 +333,7 @@ export default function Cart() {
                 {/* Security Note */}
                 <div className="mt-4 flex items-center justify-center gap-2 text-gray-500 text-xs">
                   <FaLock />
-                  <span>
-                    {currency === 'krw' 
-                      ? 'Kakao Pay 안전결제' 
-                      : 'Secure checkout powered by Stripe'
-                    }
-                  </span>
+                  <span>Secure checkout powered by PayPal</span>
                 </div>
 
                 {/* What You Get */}

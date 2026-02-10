@@ -658,27 +658,27 @@ export const downloadAPI = {
   },
 };
 
-// Stripe Connect APIs
-export const stripeConnectAPI = {
-  createAccount: async (userId: string) => {
-    const response = await axios.post(`${API_URL}/api/stripe/connect/create`, { userId });
-    return response.data;
-  },
+// PayPal Payout APIs (replaces Stripe Connect)
+export const paypalAPI = {
+    connect: async (userId: string, paypalEmail: string) => {
+        const response = await axios.post(`${API_URL}/api/paypal/connect`, { userId, paypalEmail });
+        return response.data;
+    },
 
-  getOnboardingLink: async (userId: string) => {
-    const response = await axios.post(`${API_URL}/api/stripe/connect/onboarding`, { userId });
-    return response.data;
-  },
+    getStatus: async (userId: string) => {
+        const response = await axios.get(`${API_URL}/api/paypal/status/${userId}`);
+        return response.data;
+    },
 
-  getStatus: async (userId: string) => {
-    const response = await axios.get(`${API_URL}/api/stripe/connect/status/${userId}`);
-    return response.data;
-  },
+    update: async (userId: string, paypalEmail: string) => {
+        const response = await axios.put(`${API_URL}/api/paypal/connect`, { userId, paypalEmail });
+        return response.data;
+    },
 
-  getDashboardLink: async (userId: string) => {
-    const response = await axios.post(`${API_URL}/api/stripe/connect/dashboard`, { userId });
-    return response.data;
-  }
+    disconnect: async (userId: string) => {
+        const response = await axios.delete(`${API_URL}/api/paypal/connect/${userId}`);
+        return response.data;
+    }
 };
 
 // Dashboard API

@@ -3,230 +3,27 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
-import { 
+import {
     FaUser, FaEnvelope, FaMapMarkerAlt, FaGlobe, FaCamera, FaSpinner,
     FaFacebook, FaTwitter, FaInstagram, FaYoutube, FaLinkedin, FaLink,
-    FaStripe, FaCheckCircle, FaExclamationCircle, FaExternalLinkAlt
+    FaPaypal, FaCheckCircle, FaExclamationCircle
 } from 'react-icons/fa'
-import { stripeConnectAPI } from '../../../utils/api'
+import { paypalAPI } from '../../../utils/api'
+import PayPalConnectSection from '../../components/PaypalConnectSection'
 import axios from 'axios'
 
 const API_URL = 'http://localhost:3001';
-
-// Stripe Connect Section Component
-const StripeConnectSection = ({ userId, onStatusChange }: { userId: string; onStatusChange?: (status: any) => void }) => {
-    const [status, setStatus] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [actionLoading, setActionLoading] = useState(false);
-
-    useEffect(() => {
-        checkStripeStatus();
-    }, [userId]);
-
-    const checkStripeStatus = async () => {
-        try {
-            setLoading(true);
-            const response = await stripeConnectAPI.getStatus(userId);
-            setStatus(response);
-            if (onStatusChange) onStatusChange(response);
-        } catch (error) {
-            console.error('Error checking Stripe status:', error);
-            setStatus({ connected: false });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleConnectStripe = async () => {
-        try {
-            setActionLoading(true);
-            
-            if (!status?.connected) {
-                await stripeConnectAPI.createAccount(userId);
-            }
-            
-            const response = await stripeConnectAPI.getOnboardingLink(userId);
-            
-            if (response.success && response.url) {
-                window.location.href = response.url;
-            }
-        } catch (error) {
-            console.error('Error connecting Stripe:', error);
-            alert('Failed to connect Stripe. Please try again.');
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    const handleOpenDashboard = async () => {
-        try {
-            setActionLoading(true);
-            const response = await stripeConnectAPI.getDashboardLink(userId);
-            
-            if (response.success && response.url) {
-                window.open(response.url, '_blank');
-            }
-        } catch (error) {
-            console.error('Error opening dashboard:', error);
-            alert('Failed to open Stripe dashboard.');
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                <div className="flex items-center justify-center py-8">
-                    <FaSpinner className="animate-spin text-2xl text-white" />
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-            <div className="flex items-center space-x-3 mb-4">
-                <FaStripe className="text-3xl text-[#635BFF]" />
-                <h2 className="text-xl font-semibold text-white">Stripe Payouts</h2>
-            </div>
-
-            {!status?.connected ? (
-                <div>
-                    <p className="text-gray-300 mb-4">
-                        Connect your Stripe account to receive payments directly when your tracks are sold.
-                    </p>
-                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-4">
-                        <div className="flex items-start space-x-2">
-                            <FaExclamationCircle className="text-yellow-400 mt-1 flex-shrink-0" />
-                            <p className="text-yellow-200 text-sm">
-                                You must connect a Stripe account before you can sell tracks. 
-                                Earnings will be automatically transferred to your bank account.
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleConnectStripe}
-                        disabled={actionLoading}
-                        className="w-full py-3 px-4 bg-[#635BFF] hover:bg-[#5851ea] text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-                    >
-                        {actionLoading ? (
-                            <FaSpinner className="animate-spin" />
-                        ) : (
-                            <>
-                                <FaStripe className="text-xl" />
-                                <span>Connect with Stripe</span>
-                            </>
-                        )}
-                    </button>
-                </div>
-            ) : !status?.onboardingComplete ? (
-                <div>
-                    <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 mb-4">
-                        <div className="flex items-start space-x-2">
-                            <FaExclamationCircle className="text-orange-400 mt-1 flex-shrink-0" />
-                            <div>
-                                <p className="text-orange-200 font-medium">Onboarding Incomplete</p>
-                                <p className="text-orange-200/80 text-sm mt-1">
-                                    Please complete your Stripe account setup to start receiving payments.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleConnectStripe}
-                        disabled={actionLoading}
-                        className="w-full py-3 px-4 bg-[#635BFF] hover:bg-[#5851ea] text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-                    >
-                        {actionLoading ? (
-                            <FaSpinner className="animate-spin" />
-                        ) : (
-                            <span>Complete Setup</span>
-                        )}
-                    </button>
-                </div>
-            ) : !status?.payoutsEnabled ? (
-                <div>
-                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
-                        <div className="flex items-start space-x-2">
-                            <FaSpinner className="text-blue-400 mt-1 animate-spin flex-shrink-0" />
-                            <div>
-                                <p className="text-blue-200 font-medium">Verification Pending</p>
-                                <p className="text-blue-200/80 text-sm mt-1">
-                                    Stripe is reviewing your account. This usually takes 1-2 business days.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleOpenDashboard}
-                        disabled={actionLoading}
-                        className="w-full py-3 px-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-                    >
-                        {actionLoading ? <FaSpinner className="animate-spin" /> : <span>View Stripe Dashboard</span>}
-                    </button>
-                </div>
-            ) : (
-                <div>
-                    <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-4">
-                        <div className="flex items-start space-x-2">
-                            <FaCheckCircle className="text-green-400 mt-1 flex-shrink-0" />
-                            <div>
-                                <p className="text-green-200 font-medium">Payouts Enabled</p>
-                                <p className="text-green-200/80 text-sm mt-1">
-                                    Your Stripe account is fully set up. Earnings will be automatically transferred to your bank.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleOpenDashboard}
-                        disabled={actionLoading}
-                        className="w-full py-3 px-4 bg-[#635BFF] hover:bg-[#5851ea] text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-                    >
-                        {actionLoading ? (
-                            <FaSpinner className="animate-spin" />
-                        ) : (
-                            <>
-                                <span>Open Stripe Dashboard</span>
-                                <FaExternalLinkAlt className="text-sm" />
-                            </>
-                        )}
-                    </button>
-                </div>
-            )}
-
-            {/* Fee Structure Info */}
-            <div className="mt-6 pt-6 border-t border-white/20">
-                <h3 className="text-white font-medium mb-3">Fee Structure</h3>
-                <div className="space-y-2 text-sm">
-                    <div className="flex justify-between text-gray-300">
-                        <span>Platform Fee</span>
-                        <span>15%</span>
-                    </div>
-                    <div className="flex justify-between text-gray-300">
-                        <span>You Receive</span>
-                        <span className="text-green-400 font-medium">85%</span>
-                    </div>
-                </div>
-                <p className="text-gray-400 text-xs mt-3">
-                    Example: If you sell a track for $100, you receive $85 directly to your bank account.
-                </p>
-            </div>
-        </div>
-    );
-};
 
 function UserProfile() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
+
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
-    const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [activeTab, setActiveTab] = useState('profile');
 
     const [formData, setFormData] = useState({
@@ -248,14 +45,15 @@ function UserProfile() {
         }
     });
 
-    // Check for Stripe redirect
+    // Check for PayPal redirect (if needed in future)
     useEffect(() => {
-        const stripeStatus = searchParams.get('stripe');
-        if (stripeStatus === 'success') {
-            setMessage({ type: 'success', text: 'Stripe account connected successfully!' });
+        const paypalStatus = searchParams.get('paypal');
+        const tabParam = searchParams.get('tab');
+
+        if (paypalStatus === 'success') {
+            setMessage({ type: 'success', text: 'PayPal account connected successfully!' });
             setActiveTab('payments');
-        } else if (stripeStatus === 'refresh') {
-            setMessage({ type: 'error', text: 'Stripe setup was interrupted. Please try again.' });
+        } else if (tabParam === 'payments') {
             setActiveTab('payments');
         }
     }, [searchParams]);
@@ -267,7 +65,7 @@ function UserProfile() {
             router.push('/user/pages/SignIn');
             return;
         }
-        
+
         const userInfo = JSON.parse(userData);
         setUser(userInfo);
         fetchUserProfile(userInfo.id);
@@ -277,7 +75,7 @@ function UserProfile() {
         try {
             setLoading(true);
             const response = await axios.get(`${API_URL}/api/users/${userId}`);
-            
+
             if (response.data.success) {
                 const userData = response.data.user;
                 setFormData({
@@ -309,7 +107,7 @@ function UserProfile() {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        
+
         if (name.startsWith('social_')) {
             const socialKey = name.replace('social_', '');
             setFormData(prev => ({
@@ -367,7 +165,7 @@ function UserProfile() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!user) return;
 
         try {
@@ -381,10 +179,10 @@ function UserProfile() {
                 const updatedUser = { ...user, ...response.data.user };
                 localStorage.setItem('user', JSON.stringify(updatedUser));
                 setUser(updatedUser);
-                
+
                 // Dispatch event to update Navbar
                 window.dispatchEvent(new Event('userProfileUpdated'));
-                
+
                 setMessage({ type: 'success', text: 'Profile updated successfully!' });
             }
         } catch (error) {
@@ -396,7 +194,7 @@ function UserProfile() {
     };
 
     const countries = [
-        'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 
+        'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany',
         'France', 'Japan', 'South Korea', 'Brazil', 'India', 'Other'
     ];
 
@@ -417,7 +215,7 @@ function UserProfile() {
     return (
         <div className="min-h-screen">
             <Navbar />
-            
+
             <div className="container mx-auto px-4 py-8 pt-32">
                 <div className="max-w-4xl mx-auto">
                     {/* Header */}
@@ -428,11 +226,10 @@ function UserProfile() {
 
                     {/* Message */}
                     {message && (
-                        <div className={`p-4 rounded-lg mb-6 ${
-                            message.type === 'success' 
-                                ? 'bg-green-500/20 border border-green-500/30 text-green-400' 
+                        <div className={`p-4 rounded-lg mb-6 ${message.type === 'success'
+                                ? 'bg-green-500/20 border border-green-500/30 text-green-400'
                                 : 'bg-red-500/20 border border-red-500/30 text-red-400'
-                        }`}>
+                            }`}>
                             {message.text}
                         </div>
                     )}
@@ -441,23 +238,21 @@ function UserProfile() {
                     <div className="flex space-x-4 mb-6 border-b border-white/20">
                         <button
                             onClick={() => setActiveTab('profile')}
-                            className={`pb-3 px-2 font-medium transition-colors ${
-                                activeTab === 'profile'
+                            className={`pb-3 px-2 font-medium transition-colors ${activeTab === 'profile'
                                     ? 'text-[#E100FF] border-b-2 border-[#E100FF]'
                                     : 'text-gray-400 hover:text-white'
-                            }`}
+                                }`}
                         >
                             Profile
                         </button>
                         <button
                             onClick={() => setActiveTab('payments')}
-                            className={`pb-3 px-2 font-medium transition-colors flex items-center space-x-2 ${
-                                activeTab === 'payments'
+                            className={`pb-3 px-2 font-medium transition-colors flex items-center space-x-2 ${activeTab === 'payments'
                                     ? 'text-[#E100FF] border-b-2 border-[#E100FF]'
                                     : 'text-gray-400 hover:text-white'
-                            }`}
+                                }`}
                         >
-                            <FaStripe />
+                            <FaPaypal />
                             <span>Payments</span>
                         </button>
                     </div>
@@ -472,9 +267,9 @@ function UserProfile() {
                                     <div className="relative">
                                         <div className="w-24 h-24 rounded-full bg-gray-700 overflow-hidden">
                                             {formData.profilePicture ? (
-                                                <img 
-                                                    src={formData.profilePicture} 
-                                                    alt="Profile" 
+                                                <img
+                                                    src={formData.profilePicture}
+                                                    alt="Profile"
                                                     className="w-full h-full object-cover"
                                                 />
                                             ) : (
@@ -701,11 +496,10 @@ function UserProfile() {
                             <button
                                 type="submit"
                                 disabled={saving}
-                                className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-                                    saving
+                                className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${saving
                                         ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
                                         : 'bg-[#E100FF] text-white hover:bg-[#c000dd]'
-                                }`}
+                                    }`}
                             >
                                 {saving ? (
                                     <span className="flex items-center justify-center">
@@ -722,37 +516,37 @@ function UserProfile() {
                     {/* Payments Tab */}
                     {activeTab === 'payments' && user && (
                         <div className="space-y-6">
-                            <StripeConnectSection userId={user.id} />
-                            
+                            <PayPalConnectSection userId={user.id} />
+
                             {/* Additional Payment Info */}
                             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
                                 <h2 className="text-xl font-semibold text-white mb-4">How Payments Work</h2>
                                 <div className="space-y-4 text-gray-300">
                                     <div className="flex items-start space-x-3">
-                                        <div className="w-8 h-8 rounded-full bg-[#E100FF]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                            <span className="text-[#E100FF] font-bold text-sm">1</span>
+                                        <div className="w-8 h-8 rounded-full bg-[#0070BA]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <span className="text-[#0070BA] font-bold text-sm">1</span>
                                         </div>
                                         <div>
-                                            <p className="font-medium text-white">Connect Stripe</p>
-                                            <p className="text-sm text-gray-400">Link your bank account through Stripe's secure onboarding process.</p>
+                                            <p className="font-medium text-white">Connect PayPal</p>
+                                            <p className="text-sm text-gray-400">Enter your PayPal email address to receive payments.</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start space-x-3">
-                                        <div className="w-8 h-8 rounded-full bg-[#E100FF]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                            <span className="text-[#E100FF] font-bold text-sm">2</span>
+                                        <div className="w-8 h-8 rounded-full bg-[#0070BA]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <span className="text-[#0070BA] font-bold text-sm">2</span>
                                         </div>
                                         <div>
                                             <p className="font-medium text-white">Sell Your Tracks</p>
-                                            <p className="text-sm text-gray-400">Upload and list your tracks on the marketplace.</p>
+                                            <p className="text-sm text-gray-400">Upload and list your music on the marketplace.</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start space-x-3">
-                                        <div className="w-8 h-8 rounded-full bg-[#E100FF]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                            <span className="text-[#E100FF] font-bold text-sm">3</span>
+                                        <div className="w-8 h-8 rounded-full bg-[#0070BA]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <span className="text-[#0070BA] font-bold text-sm">3</span>
                                         </div>
                                         <div>
-                                            <p className="font-medium text-white">Get Paid Automatically</p>
-                                            <p className="text-sm text-gray-400">When someone buys your track, 85% is automatically transferred to your bank account within 2-7 business days.</p>
+                                            <p className="font-medium text-white">Get Paid</p>
+                                            <p className="text-sm text-gray-400">Receive 85% of each sale directly to your PayPal account automatically.</p>
                                         </div>
                                     </div>
                                 </div>
