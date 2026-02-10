@@ -25,26 +25,17 @@ const sidebarConfig = [
       { label: 'All Tracks', icon: <FaMusic />, href: '/admin/tracks' },
       { label: 'Add Track', icon: <FaPlus />, href: '/admin/tracks/add' },
       { label: 'Genres Category', icon: <FaTags />, href: '/admin/genres' },
-      { label: 'Beat Category', icon: <FaDrum />, href: '/admin/beats' },
-      { label: 'Track Tags', icon: <FaTags />, href: '/admin/tags' },
     ],
   },
-  {
-    label: 'Sound Kits',
-    icon: <FaCut />,
-    subpages: [
-      { label: 'All Sound Kits', icon: <FaFolderOpen />, href: '/admin/sound-kits' },
-      { label: 'Add Sound Kit', icon: <FaPlus />, href: '/admin/sound-kits/add' },
-      { label: 'Category', icon: <FaCogs />, href: '/admin/sound-kits/category' },
-      { label: 'Sound Kit Tags', icon: <FaTags />, href: '/admin/sound-kits/tags' },
-    ],
-  },
+  // SOUND KITS SECTION - COMMENTED OUT
   // {
-  //   label: 'Customers',
-  //   icon: <FaUsers />,
+  //   label: 'Sound Kits',
+  //   icon: <FaCut />,
   //   subpages: [
-  //     { label: 'All Customers', icon: <FaUsers />, href: '/admin/customers' },
-  //     { label: 'Add Customers', icon: <FaUserPlus />, href: '/admin/customers/add' },
+  //     { label: 'All Sound Kits', icon: <FaFolderOpen />, href: '/admin/sound-kits' },
+  //     { label: 'Add Sound Kit', icon: <FaPlus />, href: '/admin/sound-kits/add' },
+  //     { label: 'Category', icon: <FaCogs />, href: '/admin/sound-kits/category' },
+  //     { label: 'Sound Kit Tags', icon: <FaTags />, href: '/admin/sound-kits/tags' },
   //   ],
   // },
   {
@@ -52,8 +43,9 @@ const sidebarConfig = [
     icon: <FaUser />,
     subpages: [
       { label: 'All Users', icon: <FaUser />, href: '/admin/users' },
-      { label: 'Add user', icon: <FaUserPlus />, href: '/admin/users/add' },
-      // { label: 'User Roles', icon: <FaUserCog />, href: '/admin/users/roles' },
+      { label: 'Add User', icon: <FaUserPlus />, href: '/admin/users/add' },
+      // ✅ REMOVED: Add Admin button
+      // ✅ REMOVED: User Roles option
     ],
   },
   // {
@@ -72,8 +64,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ onClose, showCloseButton })
   // All sub-menus collapsed by default
   const [open, setOpen] = useState<{ [key: string]: boolean }>({
     'Track Management': false,
-    'Sound Kits': false,
-    // 'Customers': false,
     'Users': false,
   });
   const pathname = usePathname();
@@ -180,4 +170,4 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ onClose, showCloseButton })
   );
 };
 
-export default AdminSidebar; 
+export default AdminSidebar;

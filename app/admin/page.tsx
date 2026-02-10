@@ -69,14 +69,14 @@ const Dashboard = () => {
       const [
         usersResponse,
         tracksResponse,
-        soundKitsResponse,
+        // soundKitsResponse, // COMMENTED OUT - Sound Kits disabled
         genresResponse,
         beatsResponse,
         tagsResponse
       ] = await Promise.all([
         userAPI.getUsers(),
         trackAPI.getTracks(),
-        soundKitAPI.getSoundKits(),
+        // soundKitAPI.getSoundKits(), // COMMENTED OUT - Sound Kits disabled
         genreAPI.getGenres(),
         beatAPI.getBeats(),
         tagAPI.getTags()
@@ -85,7 +85,8 @@ const Dashboard = () => {
       // Process data
       const users = usersResponse.success ? usersResponse.users : [];
       const tracks = tracksResponse.success ? tracksResponse.tracks : [];
-      const soundKits = soundKitsResponse.success ? soundKitsResponse.soundKits : [];
+      // const soundKits = soundKitsResponse.success ? soundKitsResponse.soundKits : []; // COMMENTED OUT
+      const soundKits: any[] = []; // Empty array for now
       const genres = genresResponse.success ? genresResponse.genres : [];
       const beats = beatsResponse.success ? beatsResponse.beats : [];
       const tags = tagsResponse.success ? tagsResponse.tags : [];
@@ -234,9 +235,9 @@ const Dashboard = () => {
                 <span className="text-gray-400 flex items-center gap-1">
                   <FaEye /> {item.views?.toLocaleString() || 0}
                 </span>
-                <span className="text-gray-400 flex items-center gap-1">
+                {/*<span className="text-gray-400 flex items-center gap-1">
                   <FaHeart /> {item.likes?.toLocaleString() || 0}
-                </span>
+                </span>*/}
                 <span className="text-gray-400 flex items-center gap-1">
                   <FaDownload /> {item.downloads?.toLocaleString() || 0}
                 </span>
@@ -302,8 +303,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6 mb-8">
+      {/* KPI Cards - Sound Kits card hidden */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 md:gap-6 mb-8">
         <KPICard
           title="Total Users"
           value={data.totalUsers.toLocaleString()}
@@ -320,21 +321,22 @@ const Dashboard = () => {
           trendValue="+8%"
           color="bg-green-500/20 text-green-400"
         />
-        <KPICard
+        {/* Sound Kits KPI - HIDDEN */}
+        {/* <KPICard
           title="Sound Kits"
           value={data.totalSoundKits.toLocaleString()}
           icon={<FaHeadphones size={24} />}
           trend="up"
           trendValue="+15%"
           color="bg-purple-500/20 text-purple-400"
-        />
+        /> */}
         <KPICard
           title="Genres"
           value={data.totalGenres.toLocaleString()}
           icon={<FaTags size={24} />}
           color="bg-orange-500/20 text-orange-400"
         />
-        <KPICard
+        {/*<KPICard
           title="Beats"
           value={data.totalBeats.toLocaleString()}
           icon={<FaDrum size={24} />}
@@ -345,12 +347,12 @@ const Dashboard = () => {
           value={data.totalTags.toLocaleString()}
           icon={<FaTags size={24} />}
           color="bg-indigo-500/20 text-indigo-400"
-        />
+        />*/}
       </div>
 
 
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 mb-8">
+      {/* Recent Activity - Sound Kits section hidden */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 mb-8">
         {/* Recent Users */}
         <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-2xl p-6 shadow-xl border border-[#232B43]">
           <div className="flex items-center justify-between mb-6">
@@ -391,8 +393,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Recent Sound Kits */}
-        <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-2xl p-6 shadow-xl border border-[#232B43]">
+        {/* Recent Sound Kits - HIDDEN */}
+        {/* <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-2xl p-6 shadow-xl border border-[#232B43]">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-white">Recent Sound Kits</h3>
             <FaHeadphones className="text-gray-400" />
@@ -409,51 +411,9 @@ const Dashboard = () => {
               </div>
             )}
           </div>
-        </div>
+        </div> */}
       </div>
-
-      {/* Top Performers */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        {/* Top Tracks */}
-        <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-2xl p-6 shadow-xl border border-[#232B43]">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">Top Tracks</h3>
-            <FaStar className="text-yellow-400" />
-          </div>
-          <div className="space-y-3">
-            {data.topTracks.length > 0 ? (
-              data.topTracks.map((track, index) => (
-                <TopItemCard key={track.id || index} item={track} type="track" rank={index + 1} />
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <FaMusic className="text-gray-400 mx-auto mb-2" size={32} />
-                <div className="text-gray-400 text-sm">No tracks found</div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Top Sound Kits */}
-        <div className="bg-gradient-to-br from-[#101936] to-[#0A1428] rounded-2xl p-6 shadow-xl border border-[#232B43]">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">Top Sound Kits</h3>
-            <FaStar className="text-yellow-400" />
-          </div>
-          <div className="space-y-3">
-            {data.topSoundKits.length > 0 ? (
-              data.topSoundKits.map((kit, index) => (
-                <TopItemCard key={kit.id || index} item={kit} type="soundkit" rank={index + 1} />
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <FaHeadphones className="text-gray-400 mx-auto mb-2" size={32} />
-                <div className="text-gray-400 text-sm">No sound kits found</div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+ 
     </main>
   );
 };

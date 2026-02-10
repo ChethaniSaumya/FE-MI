@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 
 import { trackAPI, imageAPI, genreAPI, beatAPI, tagAPI } from "../../utils/api";
 
@@ -35,12 +35,11 @@ interface Track {
   updatedAt?: string;
 }
 
+
 export default function TracksPage() {
   const router = useRouter();
   const [tracks, setTracks] = useState<Track[]>([]);
-  const [filteredTracks, setFilteredTracks] = useState<Track[]>([]);
   const [page, setPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
@@ -51,9 +50,9 @@ export default function TracksPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Data for converting IDs to names
-  const [genres, setGenres] = useState<Array<{ id: string, name: string }>>([]);
-  const [beats, setBeats] = useState<Array<{ id: string, name: string }>>([]);
-  const [tags, setTags] = useState<Array<{ id: string, name: string }>>([]);
+  const [genres, setGenres] = useState<Array<{id: string, name: string}>>([]);
+  const [beats, setBeats] = useState<Array<{id: string, name: string}>>([]);
+  const [tags, setTags] = useState<Array<{id: string, name: string}>>([]);
 
   // Helper function to get track ID (supports both Supabase and MongoDB)
   const getTrackId = (track: Track): string => {
@@ -70,22 +69,22 @@ export default function TracksPage() {
   // Helper function to get proper image URL
   const getImageUrl = (trackImage: string | null | undefined) => {
     console.log('Getting track image URL for:', trackImage);
-
+    
     if (!trackImage) return "/vercel.svg";
-
+    
     // If it's already a full URL, return it
     if (trackImage.startsWith('http://') || trackImage.startsWith('https://')) {
       console.log('Returning full URL:', trackImage);
       return trackImage;
     }
-
+    
     // If it's a GridFS file ID, construct the URL
     if (trackImage.length === 24) { // MongoDB ObjectId length
       const gridfsUrl = imageAPI.getImage(trackImage);
       console.log('Constructed GridFS URL:', gridfsUrl);
       return gridfsUrl;
     }
-
+    
     // If it's a relative path or other format, return as is
     console.log('Returning as-is:', trackImage);
     return trackImage;
@@ -98,30 +97,12 @@ export default function TracksPage() {
     loadTags();
   }, []);
 
-  // Filter tracks whenever search term changes
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredTracks(tracks);
-    } else {
-      const filtered = tracks.filter(track =>
-        track.trackName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        track.trackId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (track.musician && track.musician.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (track.trackKey && track.trackKey.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (track.trackType && track.trackType.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-      setFilteredTracks(filtered);
-    }
-    setPage(1); // Reset to first page when searching
-  }, [searchTerm, tracks]);
-
   async function loadTracks() {
     try {
       setLoading(true);
       const response = await trackAPI.getTracks();
       if (response.success) {
         setTracks(response.tracks);
-        setFilteredTracks(response.tracks);
       } else {
         setMessage('Failed to load tracks');
       }
@@ -182,16 +163,10 @@ export default function TracksPage() {
     return tag ? tag.name : id;
   };
 
-  const totalPages = Math.ceil(filteredTracks.length / pageSize);
-  const paginatedTracks = filteredTracks.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.ceil(tracks.length / pageSize);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
+  const paginatedTracks = tracks.slice((page - 1) * pageSize, page * pageSize);
 
-  const clearSearch = () => {
-    setSearchTerm('');
-  };
 
   const handleViewTrack = (track: Track) => {
     setSelectedTrack(track);
@@ -224,25 +199,24 @@ export default function TracksPage() {
 
   const handleDeleteTrack = async () => {
     if (!deletingTrack) return;
-
+    
     setIsDeleting(true);
     try {
       const trackId = getTrackId(deletingTrack);
       console.log('Deleting track with ID:', trackId);
       console.log('Track object:', deletingTrack);
-
+      
       if (!trackId) {
         setMessage('Error: Track ID not found');
         setIsDeleting(false);
         return;
       }
-
+      
       const response = await trackAPI.deleteTrack(trackId);
       if (response.success) {
         setMessage('Track deleted successfully!');
         // Remove from local state
         setTracks(prev => prev.filter(track => getTrackId(track) !== trackId));
-        setFilteredTracks(prev => prev.filter(track => getTrackId(track) !== trackId));
         closeDeleteModal();
         // Clear success message after 3 seconds
         setTimeout(() => {
@@ -261,24 +235,24 @@ export default function TracksPage() {
   // Audio player functions
   const getTrackFileUrl = (trackFile: string | undefined) => {
     if (!trackFile) return null;
-
+    
     // If it's already a full URL, return it
     if (trackFile.startsWith('http://') || trackFile.startsWith('https://')) {
       return trackFile;
     }
-
+    
     // If it's a GridFS file ID, construct the URL (similar to image API)
     if (trackFile.length === 24) { // MongoDB ObjectId length
       // Assuming there's a similar API for audio files
       return `http://localhost:3001/api/audio/${trackFile}`;
     }
-
+    
     return trackFile;
   };
 
   const handlePlayTrack = async (track: Track) => {
     const trackFileUrl = getTrackFileUrl(track.trackFile);
-
+    
     if (!trackFileUrl) {
       setMessage('No audio file available for this track');
       setTimeout(() => setMessage(''), 3000);
@@ -287,7 +261,7 @@ export default function TracksPage() {
 
     // Get track ID using helper function
     const trackId = getTrackId(track);
-
+    
     // If the same track is already playing, pause it
     if (currentPlayingTrack === trackId && isPlaying && audioRef) {
       audioRef.pause();
@@ -302,16 +276,16 @@ export default function TracksPage() {
 
     // Create new audio element
     const audio = new Audio(trackFileUrl);
-
+    
     audio.onplay = () => {
       setIsPlaying(true);
       setCurrentPlayingTrack(trackId);
     };
-
+    
     audio.onpause = () => {
       setIsPlaying(false);
     };
-
+    
     audio.onended = () => {
       setIsPlaying(false);
       setCurrentPlayingTrack(null);
@@ -325,7 +299,7 @@ export default function TracksPage() {
     };
 
     setAudioRef(audio);
-
+    
     try {
       await audio.play();
     } catch (error) {
@@ -335,28 +309,17 @@ export default function TracksPage() {
     }
   };
 
+
   return (
     <div className="min-h-screen p-4 sm:p-8 bg-[#081028]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <h1 className="text-2xl sm:text-3xl font-bold text-white">Track Management <span className="text-lg font-normal text-gray-400 ml-4">All Tracks</span></h1>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <div className="relative w-full sm:w-64">
-            <input
-              type="text"
-              placeholder="Search tracks..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              className="w-full px-4 py-2 rounded-lg bg-[#181F36] text-sm text-white placeholder-gray-400 focus:outline-none border border-[#232B43] pr-10"
-            />
-            {searchTerm && (
-              <button
-                onClick={clearSearch}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-              >
-                <FaTimes />
-              </button>
-            )}
-          </div>
+          <input
+            type="text"
+            placeholder="Search tracks..."
+            className="w-full sm:w-64 px-4 py-2 rounded-lg bg-[#181F36] text-sm text-white placeholder-gray-400 focus:outline-none border border-[#232B43]"
+          />
           <Link
             href="/admin/tracks/add"
             className="bg-secondary text-white px-6 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-secondary/80 transition-colors justify-center"
@@ -366,21 +329,15 @@ export default function TracksPage() {
           </Link>
         </div>
       </div>
-
+      
       {/* Message Display */}
       {message && (
-        <div className={`mb-4 p-3 rounded-lg text-sm ${message.includes('successfully')
-            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+        <div className={`mb-4 p-3 rounded-lg text-sm ${
+          message.includes('successfully') 
+            ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
             : 'bg-red-500/20 text-red-400 border border-red-500/30'
-          }`}>
+        }`}>
           {message}
-        </div>
-      )}
-
-      {/* Search Results Info */}
-      {searchTerm && (
-        <div className="mb-4 p-3 rounded-lg bg-[#232B43] text-sm text-gray-300">
-          Found {filteredTracks.length} track{filteredTracks.length !== 1 ? 's' : ''} matching "{searchTerm}"
         </div>
       )}
 
@@ -390,186 +347,174 @@ export default function TracksPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary"></div>
         </div>
       )}
-
-      {!loading && filteredTracks.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">
-            {searchTerm ? 'No tracks found matching your search.' : 'No tracks available.'}
-          </div>
-          {searchTerm && (
-            <button
-              onClick={clearSearch}
-              className="text-[#E100FF] hover:text-[#7ED7FF] transition-colors"
-            >
-              Clear search
-            </button>
-          )}
-        </div>
-      )}
-
-      {!loading && filteredTracks.length > 0 && (
+      {!loading && (
         <div className="overflow-x-auto rounded-2xl shadow-xl bg-[#081028]">
           {/* Table for md+ screens */}
           <table className="min-w-full text-white hidden md:table">
-            <thead>
-              <tr className="bg-[#232B43] text-[#C7C7C7] text-left text-sm">
-                <th className="px-6 py-4 font-semibold">Track Image</th>
-                <th className="px-6 py-4 font-semibold">Track ID</th>
-                <th className="px-6 py-4 font-semibold">Track Name</th>
-                <th className="px-6 py-4 font-semibold">Musician</th>
-                <th className="px-6 py-4 font-semibold">Price</th>
-                <th className="px-6 py-4 font-semibold">Track Key</th>
-                <th className="px-6 py-4 font-semibold">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedTracks.map((track, idx) => (
-                <tr
-                  key={getTrackId(track)}
-                  className={
-                    idx % 2 === 0
-                      ? "bg-[#101936] hover:bg-[#232B43] transition-colors"
-                      : "bg-[#081028] hover:bg-[#232B43] transition-colors"
-                  }
-                >
-                  <td className="px-6 py-4">
-                    <div className="relative w-10 h-10 group">
-                      <img
-                        src={getImageUrl(track.trackImage)}
-                        alt="Track"
-                        className="w-10 h-10 rounded-full border-2 border-[#E100FF] bg-white object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = "/vercel.svg";
-                        }}
-                      />
-                      {/* Play Button Overlay */}
-                      <button
-                        onClick={() => handlePlayTrack(track)}
-                        className="absolute inset-0 w-10 h-10 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center text-white hover:bg-black/70"
-                        title={currentPlayingTrack === getTrackId(track) && isPlaying ? "Pause" : "Play"}
-                      >
-                        {currentPlayingTrack === getTrackId(track) && isPlaying ? (
-                          <FaPause className="text-xs" />
-                        ) : (
-                          <FaPlay className="text-xs ml-0.5" />
-                        )}
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-mono">{track.trackId}</td>
-                  <td className="px-6 py-4">{track.trackName}</td>
-                  <td className="px-6 py-4 text-[#7ED7FF]">{track.musician}</td>
-                  <td className="px-6 py-4 text-[#E100FF] font-semibold">{track.trackPrice}</td>
-                  <td className="px-6 py-4">{track.trackKey}</td>
-                  <td className="px-6 py-4 flex gap-4 text-lg">
-                    <button
-                      className="text-white hover:text-[#7ED7FF] transition-colors"
-                      title="View"
-                      onClick={() => handleViewTrack(track)}
-                    >
-                      <FaEye />
-                    </button>
-                    <button
-                      className="text-white hover:text-[#E100FF] transition-colors"
-                      title="Edit"
-                      onClick={() => handleEditTrack(track)}
-                    >
-                      <FaEdit />
-                    </button>
-                    <button
-                      className="text-white hover:text-red-500 transition-colors"
-                      title="Delete"
-                      onClick={() => openDeleteModal(track)}
-                    >
-                      <FaTrash />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {/* Cards for mobile screens */}
-          <div className="md:hidden flex flex-col gap-4 p-2">
+          <thead>
+            <tr className="bg-[#232B43] text-[#C7C7C7] text-left text-sm">
+              <th className="px-6 py-4 font-semibold">Track Image</th>
+              <th className="px-6 py-4 font-semibold">Track ID</th>
+              <th className="px-6 py-4 font-semibold">Track Name</th>
+              <th className="px-6 py-4 font-semibold">Musician</th>
+              <th className="px-6 py-4 font-semibold">Price</th>
+              <th className="px-6 py-4 font-semibold">Track Key</th>
+              <th className="px-6 py-4 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody>
             {paginatedTracks.map((track, idx) => (
-              <div key={getTrackId(track)} className="bg-[#101936] rounded-2xl shadow-xl p-4 flex flex-col gap-2">
-                <div className="flex items-center gap-4 mb-2">
-                  <img
-                    src={getImageUrl(track.trackImage)}
-                    alt="Track"
-                    className="w-14 h-14 rounded-full border-2 border-[#E100FF] bg-white object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = "/vercel.svg";
-                    }}
-                  />
-                  <div>
-                    <div className="font-bold text-white">{track.trackName}</div>
-                    <div className="text-xs text-[#7ED7FF]">{track.musician}</div>
+              <tr
+                key={getTrackId(track)}
+                className={
+                  idx % 2 === 0
+                    ? "bg-[#101936] hover:bg-[#232B43] transition-colors"
+                    : "bg-[#081028] hover:bg-[#232B43] transition-colors"
+                }
+              >
+                <td className="px-6 py-4">
+                  <div className="relative w-10 h-10 group">
+                    <img 
+                      src={getImageUrl(track.trackImage)} 
+                      alt="Track" 
+                      className="w-10 h-10 rounded-full border-2 border-[#E100FF] bg-white object-cover" 
+                      onError={(e) => {
+                        e.currentTarget.src = "/vercel.svg";
+                      }}
+                    />
+                    {/* Play Button Overlay */}
+                    <button
+                      onClick={() => handlePlayTrack(track)}
+                      className="absolute inset-0 w-10 h-10 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center text-white hover:bg-black/70"
+                      title={currentPlayingTrack === getTrackId(track) && isPlaying ? "Pause" : "Play"}
+                    >
+                      {currentPlayingTrack === getTrackId(track) && isPlaying ? (
+                        <FaPause className="text-xs" />
+                      ) : (
+                        <FaPlay className="text-xs ml-0.5" />
+                      )}
+                    </button>
                   </div>
-                </div>
-                <div className="text-sm text-gray-400">Track ID: <span className="text-white font-mono">{track.trackId}</span></div>
-                <div className="text-sm text-gray-400">Price: <span className="text-[#E100FF] font-semibold">{track.trackPrice}</span></div>
-                <div className="text-sm text-gray-400">Track Key: <span className="text-white">{track.trackKey}</span></div>
-                <div className="flex gap-4 mt-2">
-                  <button
-                    className="text-white hover:text-[#7ED7FF] transition-colors"
+                </td>
+                <td className="px-6 py-4 font-mono">{track.trackId}</td>
+                <td className="px-6 py-4">{track.trackName}</td>
+                <td className="px-6 py-4 text-[#7ED7FF]">{track.musician}</td>
+                <td className="px-6 py-4 text-[#E100FF] font-semibold">{track.trackPrice}</td>
+                <td className="px-6 py-4">{track.trackKey}</td>
+                <td className="px-6 py-4 flex gap-4 text-lg">
+                  <button 
+                    className="text-white hover:text-[#7ED7FF] transition-colors" 
                     title="View"
                     onClick={() => handleViewTrack(track)}
                   >
                     <FaEye />
                   </button>
-                  <button
-                    className="text-white hover:text-[#E100FF] transition-colors"
+                  <button 
+                    className="text-white hover:text-[#E100FF] transition-colors" 
                     title="Edit"
                     onClick={() => handleEditTrack(track)}
                   >
                     <FaEdit />
                   </button>
-                  <button
-                    className="text-white hover:text-red-500 transition-colors"
+                  <button 
+                    className="text-white hover:text-red-500 transition-colors" 
                     title="Delete"
+
                     onClick={() => openDeleteModal(track)}
+
                   >
                     <FaTrash />
                   </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {/* Cards for mobile screens */}
+        <div className="md:hidden flex flex-col gap-4 p-2">
+          {paginatedTracks.map((track, idx) => (
+            <div key={track._id} className="bg-[#101936] rounded-2xl shadow-xl p-4 flex flex-col gap-2">
+              <div className="flex items-center gap-4 mb-2">
+                <img 
+                  src={getImageUrl(track.trackImage)} 
+                  alt="Track" 
+                  className="w-14 h-14 rounded-full border-2 border-[#E100FF] bg-white object-cover" 
+                  onError={(e) => {
+                    e.currentTarget.src = "/vercel.svg";
+                  }}
+                />
+                <div>
+                  <div className="font-bold text-white">{track.trackName}</div>
+                  <div className="text-xs text-[#7ED7FF]">{track.musician}</div>
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="text-sm text-gray-400">Track ID: <span className="text-white font-mono">{track.trackId}</span></div>
+              <div className="text-sm text-gray-400">Price: <span className="text-[#E100FF] font-semibold">{track.trackPrice}</span></div>
+              <div className="text-sm text-gray-400">Track Key: <span className="text-white">{track.trackKey}</span></div>
+              <div className="flex gap-4 mt-2">
+                <button 
+                  className="text-white hover:text-[#7ED7FF] transition-colors" 
+                  title="View"
+                  onClick={() => handleViewTrack(track)}
+                >
+                  <FaEye />
+                </button>
+                <button 
+                  className="text-white hover:text-[#E100FF] transition-colors" 
+                  title="Edit"
+                  onClick={() => handleEditTrack(track)}
+                >
+                  <FaEdit />
+                </button>
+                <button 
+                  className="text-white hover:text-red-500 transition-colors" 
+                  title="Delete"
+
+                  onClick={() => openDeleteModal(track)}
+
+                >
+                  <FaTrash />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
+      </div>
       )}
 
       {/* Pagination */}
-      {!loading && filteredTracks.length > 0 && (
-        <div className="flex items-center justify-between mt-6 text-white">
-          <span className="text-sm text-gray-400">
-            Showing data {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, filteredTracks.length)} of {filteredTracks.length} entries
-          </span>
-          <div className="flex gap-2 items-center">
+      {!loading && tracks.length > 0 && (
+      <div className="flex items-center justify-between mt-6 text-white">
+        <span className="text-sm text-gray-400">
+          Showing data {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, tracks.length)} of {tracks.length} entries
+        </span>
+        <div className="flex gap-2 items-center">
+          <button
+            className={`w-8 h-8 rounded-full flex items-center justify-center ${page === 1 ? 'bg-[#232B43] text-gray-500' : 'bg-[#232B43] hover:bg-[#E100FF] hover:text-white'} transition-colors`}
+            onClick={() => setPage(page - 1)}
+            disabled={page === 1}
+          >
+            &lt;
+          </button>
+          {[...Array(totalPages)].map((_, i) => (
             <button
-              className={`w-8 h-8 rounded-full flex items-center justify-center ${page === 1 ? 'bg-[#232B43] text-gray-500' : 'bg-[#232B43] hover:bg-[#E100FF] hover:text-white'} transition-colors`}
-              onClick={() => setPage(page - 1)}
-              disabled={page === 1}
+              key={i}
+              className={`w-8 h-8 rounded-full flex items-center justify-center ${page === i + 1 ? 'bg-[#E100FF] text-white' : 'bg-[#232B43] text-gray-300 hover:bg-[#E100FF] hover:text-white'} transition-colors`}
+              onClick={() => setPage(i + 1)}
             >
-              &lt;
+              {i + 1}
             </button>
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i}
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${page === i + 1 ? 'bg-[#E100FF] text-white' : 'bg-[#232B43] text-gray-300 hover:bg-[#E100FF] hover:text-white'} transition-colors`}
-                onClick={() => setPage(i + 1)}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              className={`w-8 h-8 rounded-full flex items-center justify-center ${page === totalPages ? 'bg-[#232B43] text-gray-500' : 'bg-[#232B43] hover:bg-[#E100FF] hover:text-white'} transition-colors`}
-              onClick={() => setPage(page + 1)}
-              disabled={page === totalPages}
-            >
-              &gt;
-            </button>
-          </div>
+          ))}
+          <button
+            className={`w-8 h-8 rounded-full flex items-center justify-center ${page === totalPages ? 'bg-[#232B43] text-gray-500' : 'bg-[#232B43] hover:bg-[#E100FF] hover:text-white'} transition-colors`}
+            onClick={() => setPage(page + 1)}
+            disabled={page === totalPages}
+          >
+            &gt;
+          </button>
         </div>
+      </div>
+
       )}
 
       {/* View Track Modal */}
@@ -580,19 +525,21 @@ export default function TracksPage() {
               <h2 className="text-xl sm:text-2xl font-bold text-white">Track Details</h2>
               <button
                 onClick={closeViewModal}
+
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 <FaTimes className="text-xl" />
               </button>
             </div>
+            
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Track Image */}
-              <div className="flex justify-center md:justify-start">
-                <img
-                  src={selectedTrack.trackImage || "/vercel.svg"}
-                  alt={selectedTrack.trackName}
-                  className="w-48 h-48 rounded-lg border-2 border-[#E100FF] bg-white object-cover"
+              <div className="flex justify-center">
+                <img 
+                  src={getImageUrl(selectedTrack.trackImage)} 
+                  alt="Track" 
+                  className="w-48 h-48 rounded-lg border-2 border-[#E100FF] bg-white object-cover" 
                   onError={(e) => {
                     e.currentTarget.src = "/vercel.svg";
                   }}
@@ -600,24 +547,20 @@ export default function TracksPage() {
               </div>
 
               {/* Track Information */}
-              <div className="md:col-span-2 space-y-4">
+              <div className="space-y-4">
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-2">{selectedTrack.trackName}</h3>
+                  <p className="text-gray-400 text-sm">Track ID: {selectedTrack.trackId}</p>
                 </div>
 
-                {/* KEEP THESE FIELDS */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-400">Track ID:</span>
-                    <p className="text-white font-mono">{selectedTrack.trackId}</p>
-                  </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-400">Musician:</span>
-                    <p className="text-white">{selectedTrack.musician}</p>
+                    <p className="text-white">{selectedTrack.musician || 'N/A'}</p>
                   </div>
                   <div>
                     <span className="text-gray-400">Price:</span>
-                    <p className="text-white font-semibold">${selectedTrack.trackPrice}</p>
+                    <p className="text-[#E100FF] font-semibold">${selectedTrack.trackPrice || 0}</p>
                   </div>
                   <div>
                     <span className="text-gray-400">BPM:</span>
@@ -628,6 +571,10 @@ export default function TracksPage() {
                     <p className="text-white">{selectedTrack.trackKey || 'N/A'}</p>
                   </div>
                   <div>
+                    <span className="text-gray-400">Type:</span>
+                    <p className="text-white">{selectedTrack.trackType || 'N/A'}</p>
+                  </div>
+                  <div>
                     <span className="text-gray-400">Mood:</span>
                     <p className="text-white">{selectedTrack.moodType || 'N/A'}</p>
                   </div>
@@ -635,30 +582,29 @@ export default function TracksPage() {
                     <span className="text-gray-400">Energy:</span>
                     <p className="text-white">{selectedTrack.energyType || 'N/A'}</p>
                   </div>
-
-                  {/* REMOVED THESE FIELDS:
-            <div>
-              <span className="text-gray-400">Platform:</span>
-              <p className="text-white">{selectedTrack.generatedTrackPlatform || 'N/A'}</p>
-            </div>
-            <div>
-              <span className="text-gray-400">Instrument:</span>
-              <p className="text-white">{selectedTrack.instrument || 'N/A'}</p>
-            </div>
-            <div>
-              <span className="text-gray-400">Type:</span>
-              <p className="text-white">{selectedTrack.trackType || 'N/A'}</p>
-            </div>
-            */}
+                  <div>
+                    <span className="text-gray-400">Instrument:</span>
+                    <p className="text-white">{selectedTrack.instrument || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Platform:</span>
+                    <p className="text-white">{selectedTrack.generatedTrackPlatform || 'N/A'}</p>
+                  </div>
                 </div>
 
-                {/* Genre Category (if you want to keep this) */}
+                {selectedTrack.about && (
+                  <div>
+                    <span className="text-gray-400">About:</span>
+                    <p className="text-white text-sm mt-1">{selectedTrack.about}</p>
+                  </div>
+                )}
+
                 {selectedTrack.genreCategory && selectedTrack.genreCategory.length > 0 && (
                   <div>
-                    <span className="text-gray-400 block mb-2">Genres:</span>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTrack.genreCategory.map((genreId: string, index: number) => (
-                        <span key={index} className="px-3 py-1 bg-[#E100FF]/20 text-[#E100FF] rounded-full text-xs">
+                    <span className="text-gray-400">Genres:</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {selectedTrack.genreCategory.map((genreId, index) => (
+                        <span key={index} className="px-2 py-1 bg-[#232B43] text-white text-xs rounded-full">
                           {getGenreName(genreId)}
                         </span>
                       ))}
@@ -666,18 +612,42 @@ export default function TracksPage() {
                   </div>
                 )}
 
-                {/* About Section (if you want to keep this) */}
-                {selectedTrack.about && (
+                {selectedTrack.beatCategory && selectedTrack.beatCategory.length > 0 && (
                   <div>
-                    <span className="text-gray-400 block mb-2">About:</span>
-                    <p className="text-white text-sm">{selectedTrack.about}</p>
+                    <span className="text-gray-400">Beats:</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {selectedTrack.beatCategory.map((beatId, index) => (
+                        <span key={index} className="px-2 py-1 bg-[#232B43] text-white text-xs rounded-full">
+                          {getBeatName(beatId)}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
+
+                {selectedTrack.trackTags && selectedTrack.trackTags.length > 0 && (
+                  <div>
+                    <span className="text-gray-400">Tags:</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {selectedTrack.trackTags.map((tagId, index) => (
+                        <span key={index} className="px-2 py-1 bg-[#232B43] text-white text-xs rounded-full">
+                          {getTagName(tagId)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-xs text-gray-400">
+                  Created: {new Date(selectedTrack.createdAt).toLocaleDateString()}
+                </div>
               </div>
+
             </div>
           </div>
         </div>
       )}
+
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && deletingTrack && (
@@ -692,7 +662,7 @@ export default function TracksPage() {
                 <p className="text-gray-400 text-sm">This action cannot be undone.</p>
               </div>
             </div>
-
+            
             <div className="bg-[#181F36] rounded-lg p-4 mb-6">
               <h3 className="font-semibold text-white mb-2">Track Details:</h3>
               <p className="text-gray-300 mb-1"><span className="text-gray-400">Name:</span> {deletingTrack.trackName}</p>
@@ -705,10 +675,12 @@ export default function TracksPage() {
                 onClick={closeDeleteModal}
                 disabled={isDeleting}
                 className="flex-1 py-3 rounded-lg bg-[#232B43] text-white font-semibold hover:bg-[#181F36] transition-colors disabled:opacity-50"
+
               >
                 Cancel
               </button>
               <button
+
                 onClick={handleDeleteTrack}
                 disabled={isDeleting}
                 className="flex-1 py-3 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
@@ -721,6 +693,7 @@ export default function TracksPage() {
                 ) : (
                   'Delete Track'
                 )}
+
               </button>
             </div>
           </div>
@@ -728,4 +701,4 @@ export default function TracksPage() {
       )}
     </div>
   );
-}
+} 

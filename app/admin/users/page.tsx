@@ -1,97 +1,107 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
-import { FaEye, FaEdit, FaTrash, FaTimes } from "react-icons/fa";
+import { FaEye, FaEdit, FaTrash, FaTimes, FaUserPlus } from "react-icons/fa";
 import { userAPI } from "../../utils/api";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
 
 interface User {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
-  displayName?: string;
-  location?: string;
-  country?: string;
-  biography?: string;
+  username?: string;
+  phone?: string;
+  role: string;
+  isAdmin: boolean;
+  isCreator: boolean;
+  isBuyer: boolean;
   profilePicture?: string;
-  socialLinks?: {
-    facebook?: string;
-    twitter?: string;
-    instagram?: string;
-    youtube?: string;
-    linkedin?: string;
-    website?: string;
-  };
   createdAt: string;
 }
 
-
 export default function UsersPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [page, setPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const pageSize = 8;
-
-  // Modal states
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
   const [showViewModal, setShowViewModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  // Load users from database
-  const loadUsers = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await userAPI.getUsers();
-      if (response.success) {
-        setUsers(response.users);
-      } else {
-        setError('Failed to load users');
-      }
-    } catch (err) {
-      console.error('Error loading users:', err);
-      setError('Failed to load users');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const pageSize = 8;
 
   useEffect(() => {
     loadUsers();
   }, []);
 
-  // Filter users based on search term
-  const filteredUsers = users.filter(user => 
-    user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (user.displayName && user.displayName.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filter users whenever search term changes
+  useEffect(() => {
+    let filtered = users;
+    
+    // Apply search filter
+    if (searchTerm.trim() !== '') {
+      filtered = filtered.filter(user => 
+        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.username && user.username.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+    
+    setFilteredUsers(filtered);
+    setPage(1); // Reset to first page when filtering
+  }, [searchTerm, users]);
+
+  async function loadUsers() {
+    try {
+      setLoading(true);
+      const response = await userAPI.getUsers();
+      if (response.success) {
+        setUsers(response.users);
+        setFilteredUsers(response.users);
+      } else {
+        setMessage('Failed to load users');
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+      setMessage('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
+
+  const getRoleBadge = (user: User) => {
+    if (user.isAdmin && user.role === 'admin') {
+      return <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full">Admin</span>;
+    }
+    if (user.isCreator) {
+      return <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">Creator</span>;
+    }
+    if (user.isBuyer) {
+      return <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">User</span>;
+    }
+    return null;
+  };
 
   const totalPages = Math.ceil(filteredUsers.length / pageSize);
   const paginatedUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize);
 
-  // Get user's full name
-  const getUserName = (user: User) => {
-    return user.displayName || `${user.firstName} ${user.lastName}`;
-  };
-
-  // Get user's role (for now, defaulting to "User")
-  const getUserRole = (user: User) => {
-    // You can implement role logic here based on your requirements
-    return "User";
-  };
-
-  // View user
   const handleViewUser = (user: User) => {
     setSelectedUser(user);
     setShowViewModal(true);
@@ -102,536 +112,406 @@ export default function UsersPage() {
     setSelectedUser(null);
   };
 
-  // Edit user
   const handleEditUser = (user: User) => {
-    setEditingUser({ ...user });
-    setShowEditModal(true);
+    // Store user data for editing (you'll need to create an edit user page)
+    localStorage.setItem('editUserData', JSON.stringify(user));
+    router.push(`/admin/users/edit?id=${user.id}`);
   };
 
-  const closeEditModal = () => {
-    setShowEditModal(false);
-    setEditingUser(null);
-    setMessage(null);
-  };
-
-  const handleInputChange = (field: keyof User, value: string) => {
-    if (editingUser) {
-      setEditingUser({ ...editingUser, [field]: value });
-    }
-  };
-// saith new change
-  const handleSaveEdit = async () => {
-    if (!editingUser) return;
-
-    try {
-      setIsSaving(true);
-      setMessage(null);
-      
-      const response = await userAPI.updateUser(editingUser.id, {
-        firstName: editingUser.firstName,
-        lastName: editingUser.lastName,
-        email: editingUser.email,
-        displayName: editingUser.displayName,
-        location: editingUser.location,
-        country: editingUser.country,
-        biography: editingUser.biography
-      });
-      
-      if (response.success) {
-        // Update local state with the response data
-        setUsers(users.map(user => 
-          user.id === editingUser.id ? response.user : user
-        ));
-        
-        setMessage({ type: 'success', text: response.message || 'User updated successfully!' });
-        setTimeout(() => {
-          closeEditModal();
-        }, 1500);
-      } else {
-        setMessage({ type: 'error', text: response.message || 'Failed to update user' });
-      }
-    } catch (err: any) {
-      console.error('Error updating user:', err);
-      setMessage({ 
-        type: 'error', 
-        text: err.response?.data?.message || 'Failed to update user' 
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Delete user
-  const handleDeleteUser = (user: User) => {
+  const openDeleteModal = (user: User) => {
     setDeletingUser(user);
     setShowDeleteModal(true);
+    setMessage('');
   };
 
   const closeDeleteModal = () => {
     setShowDeleteModal(false);
     setDeletingUser(null);
-    setMessage(null);
+    setMessage('');
   };
 
-  const confirmDelete = async () => {
+  const handleDeleteUser = async () => {
     if (!deletingUser) return;
-
+    
+    setIsDeleting(true);
     try {
-      setIsDeleting(true);
-      setMessage(null);
-      
       const response = await userAPI.deleteUser(deletingUser.id);
-      
       if (response.success) {
-        // Remove user from local state
-        setUsers(users.filter(user => user.id !== deletingUser.id));
-        
-        setMessage({ type: 'success', text: response.message || 'User deleted successfully!' });
+        setMessage('User deleted successfully!');
+        // Remove from local state
+        setUsers(prev => prev.filter(user => user.id !== deletingUser.id));
+        setFilteredUsers(prev => prev.filter(user => user.id !== deletingUser.id));
+        closeDeleteModal();
+        // Clear success message after 3 seconds
         setTimeout(() => {
-          closeDeleteModal();
-        }, 1500);
-      } else {
-        setMessage({ type: 'error', text: response.message || 'Failed to delete user' });
+          setMessage('');
+        }, 3000);
       }
-    } catch (err: any) {
-      console.error('Error deleting user:', err);
-      setMessage({ 
-        type: 'error', 
-        text: err.response?.data?.message || 'Failed to delete user' 
-      });
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      setMessage(error.response?.data?.message || 'Failed to delete user');
     } finally {
       setIsDeleting(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#081028] flex items-center justify-center">
-        <div className="text-white text-xl">Loading users...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-[#081028] flex items-center justify-center">
-        <div className="text-red-400 text-xl">{error}</div>
-      </div>
-    );
-  }
-
-
   return (
-    <div className="min-h-screen bg-[#081028]">
-      <div className="mx-4 md:mx-8 pt-6 md:pt-8">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 md:mb-8 gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">Users <span className="text-lg font-normal text-gray-400 ml-4">All Users</span></h1>
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-64 px-4 py-2 rounded-lg bg-[#181F36] text-sm text-white placeholder-gray-400 focus:outline-none border border-[#232B43]"
-          />
+    <div className="min-h-screen p-4 sm:p-8 bg-[#081028]">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white">Users <span className="text-lg font-normal text-gray-400 ml-4">All Users</span></h1>
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="w-full px-4 py-2 rounded-lg bg-[#181F36] text-sm text-white placeholder-gray-400 focus:outline-none border border-[#232B43] pr-10"
+            />
+            {searchTerm && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              >
+                <FaTimes />
+              </button>
+            )}
+          </div>
+          <Link
+            href="/admin/users/add"
+            className="bg-secondary text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-secondary/80 transition-colors justify-center"
+          >
+            <FaUserPlus />
+            Add User
+          </Link>
         </div>
-        
-        {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto rounded-2xl shadow-xl bg-[#101936]">
-          <table className="min-w-full text-white">
+      </div>
+      
+      {/* Message Display */}
+      {message && (
+        <div className={`mb-4 p-3 rounded-lg text-sm ${
+          message.includes('successfully') 
+            ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+            : 'bg-red-500/20 text-red-400 border border-red-500/30'
+        }`}>
+          {message}
+        </div>
+      )}
+
+      {/* Search Results Info */}
+      {searchTerm && (
+        <div className="mb-4 p-3 rounded-lg bg-[#232B43] text-sm text-gray-300">
+          Found {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''} 
+          {searchTerm && ` matching "${searchTerm}"`}
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary"></div>
+        </div>
+      )}
+
+      {!loading && filteredUsers.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-gray-400 mb-4">
+            {searchTerm ? 'No users found matching your criteria.' : 'No users available.'}
+          </div>
+          {searchTerm && (
+            <button
+              onClick={() => {
+                setSearchTerm('');
+              }}
+              className="text-[#E100FF] hover:text-[#7ED7FF] transition-colors"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      )}
+
+      {!loading && filteredUsers.length > 0 && (
+        <div className="overflow-x-auto rounded-2xl shadow-xl bg-[#081028]">
+          {/* Table for md+ screens */}
+          <table className="min-w-full text-white hidden md:table">
             <thead>
-              <tr className="bg-[#19213A] text-[#C7C7C7] text-left text-sm">
-                <th className="px-6 py-4 font-semibold">Image</th>
+              <tr className="bg-[#232B43] text-[#C7C7C7] text-left text-sm">
+                <th className="px-6 py-4 font-semibold">Profile</th>
                 <th className="px-6 py-4 font-semibold">Name</th>
                 <th className="px-6 py-4 font-semibold">Email</th>
                 <th className="px-6 py-4 font-semibold">Username</th>
-                <th className="px-6 py-4 font-semibold">Role</th>
+                <th className="px-6 py-4 font-semibold">Phone</th>
                 <th className="px-6 py-4 font-semibold">Action</th>
               </tr>
             </thead>
             <tbody>
-
-              {paginatedUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
-                    {searchTerm ? 'No users found matching your search.' : 'No users found.'}
-
-                  </td>
-                </tr>
-              ) : (
-                paginatedUsers.map((user, idx) => (
-                  <tr
-                    key={user.id}
-                    className={
-                      idx % 2 === 0
-                        ? "bg-[#181F36] hover:bg-[#232B43] transition-colors"
-                        : "bg-[#081028] hover:bg-[#232B43] transition-colors"
-                    }
-                  >
-                    <td className="px-6 py-4">
-                      <img src={user.profilePicture || "/vercel.svg"} alt={getUserName(user)} className="w-10 h-10 rounded-full object-cover" />
-                    </td>
-                    <td className="px-6 py-4">{getUserName(user)}</td>
-                    <td className="px-6 py-4">{user.email}</td>
-                    <td className="px-6 py-4">{user.displayName || `${user.firstName.toLowerCase()}${user.lastName.toLowerCase()}`}</td>
-                    <td className="px-6 py-4">{getUserRole(user)}</td>
-                    <td className="px-6 py-4 flex gap-4 text-lg">
-                      <button 
-                        className="hover:text-[#7ED7FF] transition-colors" 
-                        title="View"
-                        onClick={() => handleViewUser(user)}
-                      >
-                        <FaEye />
-                      </button>
-                      <button 
-                        className="hover:text-[#E100FF] transition-colors" 
-                        title="Edit"
-                        onClick={() => handleEditUser(user)}
-                      >
-                        <FaEdit />
-                      </button>
-                      <button 
-                        className="hover:text-red-500 transition-colors" 
-                        title="Delete"
-                        onClick={() => handleDeleteUser(user)}
-                      >
-                        <FaTrash />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="md:hidden space-y-4">
-          {paginatedUsers.length === 0 ? (
-            <div className="text-center text-gray-400 py-8">
-              {searchTerm ? 'No users found matching your search.' : 'No users found.'}
-            </div>
-          ) : (
-            paginatedUsers.map((user, idx) => (
-              <div
-                key={user.id}
-                className="bg-[#101936] rounded-2xl p-4 shadow-xl"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <img src={user.profilePicture || "/vercel.svg"} alt={getUserName(user)} className="w-12 h-12 rounded-full object-cover" />
-                    <div>
-                      <h3 className="text-white font-semibold text-lg">{getUserName(user)}</h3>
-                      <p className="text-gray-400 text-sm">{user.email}</p>
+              {paginatedUsers.map((user, idx) => (
+                <tr
+                  key={user.id}
+                  className={
+                    idx % 2 === 0
+                      ? "bg-[#101936] hover:bg-[#232B43] transition-colors"
+                      : "bg-[#081028] hover:bg-[#232B43] transition-colors"
+                  }
+                >
+                  <td className="px-6 py-4">
+                    <div className="relative w-10 h-10">
+                      <img 
+                        src={user.profilePicture || "/vercel.svg"} 
+                        alt={`${user.firstName} ${user.lastName}`} 
+                        className="w-10 h-10 rounded-full border-2 border-[#E100FF] bg-white object-cover" 
+                        onError={(e) => {
+                          e.currentTarget.src = "/vercel.svg";
+                        }}
+                      />
                     </div>
-                  </div>
-                  <div className="flex gap-2">
+                  </td>
+                  <td className="px-6 py-4">
+                    {user.firstName} {user.lastName}
+                  </td>
+                  <td className="px-6 py-4 text-[#7ED7FF]">{user.email}</td>
+                  <td className="px-6 py-4 font-mono text-sm">{user.username || 'N/A'}</td>
+                  <td className="px-6 py-4">{user.phone || 'N/A'}</td>
+                  <td className="px-6 py-4 flex gap-4 text-lg">
                     <button 
-                      className="p-2 rounded-lg bg-[#19213A] hover:bg-[#7ED7FF] hover:text-black transition-colors" 
+                      className="text-white hover:text-[#7ED7FF] transition-colors" 
                       title="View"
                       onClick={() => handleViewUser(user)}
                     >
-                      <FaEye className="text-white" />
+                      <FaEye />
                     </button>
                     <button 
-                      className="p-2 rounded-lg bg-[#19213A] hover:bg-[#E100FF] hover:text-black transition-colors" 
+                      className="text-white hover:text-[#E100FF] transition-colors" 
                       title="Edit"
                       onClick={() => handleEditUser(user)}
                     >
-                      <FaEdit className="text-white" />
+                      <FaEdit />
                     </button>
                     <button 
-                      className="p-2 rounded-lg bg-[#19213A] hover:bg-red-500 hover:text-black transition-colors" 
+                      className="text-white hover:text-red-500 transition-colors" 
                       title="Delete"
-                      onClick={() => handleDeleteUser(user)}
+                      onClick={() => openDeleteModal(user)}
                     >
-                      <FaTrash className="text-white" />
+                      <FaTrash />
                     </button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-400">Username:</span>
-                    <p className="text-white font-medium">{user.displayName || `${user.firstName.toLowerCase()}${user.lastName.toLowerCase()}`}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">Role:</span>
-                    <p className="text-white font-medium">{getUserRole(user)}</p>
-                  </div>
-                </div>
-
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Pagination */}
-        {filteredUsers.length > 0 && (
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-6 mb-6 md:mb-8 text-white gap-4">
-            <span className="text-sm text-gray-400 text-center md:text-left">
-              Showing data {filteredUsers.length === 0 ? 0 : (page - 1) * pageSize + 1} to {Math.min(page * pageSize, filteredUsers.length)} of {filteredUsers.length} entries
-            </span>
-            <div className="flex gap-2 items-center justify-center">
-              <button
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${page === 1 ? 'bg-[#232B43] text-gray-500' : 'bg-[#232B43] hover:bg-[#E100FF] hover:text-white'} transition-colors`}
-                onClick={() => setPage(page - 1)}
-                disabled={page === 1}
-              >
-                &lt;
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-                <button
-                  key={num}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center ${page === num ? 'bg-[#E100FF] text-white' : 'bg-[#232B43] text-gray-300 hover:bg-[#E100FF] hover:text-white'} transition-colors`}
-                  onClick={() => setPage(num)}
-                >
-                  {num}
-                </button>
+                  </td>
+                </tr>
               ))}
-              <button
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${page === totalPages ? 'bg-[#232B43] text-gray-500' : 'bg-[#232B43] hover:bg-[#E100FF] hover:text-white'} transition-colors`}
-                onClick={() => setPage(page + 1)}
-                disabled={page === totalPages}
-              >
-                &gt;
-              </button>
-            </div>
+            </tbody>
+          </table>
+          
+          {/* Cards for mobile screens */}
+          <div className="md:hidden flex flex-col gap-4 p-2">
+            {paginatedUsers.map((user) => (
+              <div key={user.id} className="bg-[#101936] rounded-2xl shadow-xl p-4 flex flex-col gap-2">
+                <div className="flex items-center gap-4 mb-2">
+                  <img 
+                    src={user.profilePicture || "/vercel.svg"} 
+                    alt={`${user.firstName} ${user.lastName}`} 
+                    className="w-14 h-14 rounded-full border-2 border-[#E100FF] bg-white object-cover" 
+                    onError={(e) => {
+                      e.currentTarget.src = "/vercel.svg";
+                    }}
+                  />
+                  <div>
+                    <div className="font-bold text-white">{user.firstName} {user.lastName}</div>
+                    <div className="text-xs text-[#7ED7FF]">{user.email}</div>
+                    <div className="mt-1">{getRoleBadge(user)}</div>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-400">Username: <span className="text-white font-mono">{user.username || 'N/A'}</span></div>
+                <div className="text-sm text-gray-400">Phone: <span className="text-white">{user.phone || 'N/A'}</span></div>
+                <div className="flex gap-4 mt-2">
+                  <button 
+                    className="text-white hover:text-[#7ED7FF] transition-colors" 
+                    title="View"
+                    onClick={() => handleViewUser(user)}
+                  >
+                    <FaEye />
+                  </button>
+                  <button 
+                    className="text-white hover:text-[#E100FF] transition-colors" 
+                    title="Edit"
+                    onClick={() => handleEditUser(user)}
+                  >
+                    <FaEdit />
+                  </button>
+                  <button 
+                    className="text-white hover:text-red-500 transition-colors" 
+                    title="Delete"
+                    onClick={() => openDeleteModal(user)}
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && filteredUsers.length > 0 && (
+        <div className="flex items-center justify-between mt-6 text-white">
+          <span className="text-sm text-gray-400">
+            Showing data {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, filteredUsers.length)} of {filteredUsers.length} entries
+          </span>
+          <div className="flex gap-2 items-center">
+            <button
+              className={`w-8 h-8 rounded-full flex items-center justify-center ${page === 1 ? 'bg-[#232B43] text-gray-500' : 'bg-[#232B43] hover:bg-[#E100FF] hover:text-white'} transition-colors`}
+              onClick={() => setPage(page - 1)}
+              disabled={page === 1}
+            >
+              &lt;
+            </button>
+            {[...Array(totalPages)].map((_, i) => (
+              <button
+                key={i}
+                className={`w-8 h-8 rounded-full flex items-center justify-center ${page === i + 1 ? 'bg-[#E100FF] text-white' : 'bg-[#232B43] text-gray-300 hover:bg-[#E100FF] hover:text-white'} transition-colors`}
+                onClick={() => setPage(i + 1)}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              className={`w-8 h-8 rounded-full flex items-center justify-center ${page === totalPages ? 'bg-[#232B43] text-gray-500' : 'bg-[#232B43] hover:bg-[#E100FF] hover:text-white'} transition-colors`}
+              onClick={() => setPage(page + 1)}
+              disabled={page === totalPages}
+            >
+              &gt;
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* View User Modal */}
       {showViewModal && selectedUser && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-[#00000020] flex items-center justify-center z-50 p-4">
-          <div className="bg-[#101936] rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-[#101936] rounded-2xl p-6 sm:p-8 shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-white">User Details</h2>
-              <button onClick={closeViewModal} className="text-gray-400 hover:text-white">
-                <FaTimes size={20} />
+              <h2 className="text-xl sm:text-2xl font-bold text-white">User Details</h2>
+              <button
+                onClick={closeViewModal}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <FaTimes className="text-xl" />
               </button>
             </div>
             
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <img src={selectedUser.profilePicture || "/vercel.svg"} alt={getUserName(selectedUser)} className="w-16 h-16 rounded-full object-cover" />
-                <div>
-                  <h3 className="text-white font-semibold text-lg">{getUserName(selectedUser)}</h3>
-                  <p className="text-gray-400">{selectedUser.email}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Profile Picture */}
+              <div className="flex justify-center md:justify-start">
+                <img 
+                  src={selectedUser.profilePicture || "/vercel.svg"} 
+                  alt={`${selectedUser.firstName} ${selectedUser.lastName}`} 
+                  className="w-48 h-48 rounded-lg border-2 border-[#E100FF] bg-white object-cover" 
+                  onError={(e) => {
+                    e.currentTarget.src = "/vercel.svg";
+                  }}
+                />
+              </div>
 
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              {/* User Information */}
+              <div className="md:col-span-2 space-y-4">
                 <div>
-                  <span className="text-gray-400">First Name:</span>
-                  <p className="text-white font-medium">{selectedUser.firstName}</p>
+                  <h3 className="text-lg font-semibold text-white mb-2">{selectedUser.firstName} {selectedUser.lastName}</h3>
+                  <div className="flex gap-2 mb-2">
+                    {getRoleBadge(selectedUser)}
+                  </div>
                 </div>
-                <div>
-                  <span className="text-gray-400">Last Name:</span>
-                  <p className="text-white font-medium">{selectedUser.lastName}</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-400">Email:</span>
+                    <p className="text-white">{selectedUser.email}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Username:</span>
+                    <p className="text-white font-mono">{selectedUser.username || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Phone:</span>
+                    <p className="text-white">{selectedUser.phone || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">User ID:</span>
+                    <p className="text-white font-mono text-xs">{selectedUser.id}</p>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-gray-400">Display Name:</span>
-                  <p className="text-white font-medium">{selectedUser.displayName || 'Not set'}</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="p-3 bg-[#232B43] rounded-lg">
+                    <span className="text-gray-400 block">Admin Access</span>
+                    <span className={`font-semibold ${selectedUser.isAdmin ? 'text-green-400' : 'text-red-400'}`}>
+                      {selectedUser.isAdmin ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-[#232B43] rounded-lg">
+                    <span className="text-gray-400 block">Creator</span>
+                    <span className={`font-semibold ${selectedUser.isCreator ? 'text-green-400' : 'text-red-400'}`}>
+                      {selectedUser.isCreator ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-[#232B43] rounded-lg">
+                    <span className="text-gray-400 block">Buyer</span>
+                    <span className={`font-semibold ${selectedUser.isBuyer ? 'text-green-400' : 'text-red-400'}`}>
+                      {selectedUser.isBuyer ? 'Yes' : 'No'}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-gray-400">Location:</span>
-                  <p className="text-white font-medium">{selectedUser.location || 'Not set'}</p>
+
+                <div className="text-xs text-gray-400">
+                  Created: {new Date(selectedUser.createdAt).toLocaleDateString()}
                 </div>
-                <div>
-                  <span className="text-gray-400">Country:</span>
-                  <p className="text-white font-medium">{selectedUser.country || 'Not set'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-400">Role:</span>
-                  <p className="text-white font-medium">{getUserRole(selectedUser)}</p>
-                </div>
-              </div>
-              
-              {selectedUser.biography && (
-                <div>
-                  <span className="text-gray-400 text-sm">Biography:</span>
-                  <p className="text-white text-sm mt-1">{selectedUser.biography}</p>
-                </div>
-              )}
-              
-              <div>
-                <span className="text-gray-400 text-sm">Joined:</span>
-                <p className="text-white text-sm mt-1">
-                  {new Date(selectedUser.createdAt).toLocaleDateString()}
-                </p>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Edit User Modal */}
-      {showEditModal && editingUser && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-[#00000020] flex items-center justify-center z-50 p-4">
-          <div className="bg-[#101936] rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-white">Edit User</h2>
-              <button onClick={closeEditModal} className="text-gray-400 hover:text-white">
-                <FaTimes size={20} />
-              </button>
-            </div>
-            
-            {message && (
-              <div className={`p-3 rounded-lg text-sm mb-4 ${
-                message.type === 'success' 
-                  ? 'bg-green-500/20 border border-green-500/30 text-green-400' 
-                  : 'bg-red-500/20 border border-red-500/30 text-red-400'
-              }`}>
-                {message.text}
-              </div>
-            )}
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-gray-300 mb-1 text-sm">First Name</label>
-                <input
-                  type="text"
-                  value={editingUser.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  className="w-full bg-[#181F36] text-white rounded-lg px-3 py-2 focus:outline-none border border-[#232B43] focus:border-[#E100FF] text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 mb-1 text-sm">Last Name</label>
-                <input
-                  type="text"
-                  value={editingUser.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  className="w-full bg-[#181F36] text-white rounded-lg px-3 py-2 focus:outline-none border border-[#232B43] focus:border-[#E100FF] text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 mb-1 text-sm">Email</label>
-                <input
-                  type="email"
-                  value={editingUser.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="w-full bg-[#181F36] text-white rounded-lg px-3 py-2 focus:outline-none border border-[#232B43] focus:border-[#E100FF] text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 mb-1 text-sm">Display Name</label>
-                <input
-                  type="text"
-                  value={editingUser.displayName || ''}
-                  onChange={(e) => handleInputChange('displayName', e.target.value)}
-                  className="w-full bg-[#181F36] text-white rounded-lg px-3 py-2 focus:outline-none border border-[#232B43] focus:border-[#E100FF] text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 mb-1 text-sm">Location</label>
-                <input
-                  type="text"
-                  value={editingUser.location || ''}
-                  onChange={(e) => handleInputChange('location', e.target.value)}
-                  className="w-full bg-[#181F36] text-white rounded-lg px-3 py-2 focus:outline-none border border-[#232B43] focus:border-[#E100FF] text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 mb-1 text-sm">Country</label>
-                <input
-                  type="text"
-                  value={editingUser.country || ''}
-                  onChange={(e) => handleInputChange('country', e.target.value)}
-                  className="w-full bg-[#181F36] text-white rounded-lg px-3 py-2 focus:outline-none border border-[#232B43] focus:border-[#E100FF] text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 mb-1 text-sm">Biography</label>
-                <textarea
-                  value={editingUser.biography || ''}
-                  onChange={(e) => handleInputChange('biography', e.target.value)}
-                  rows={3}
-                  className="w-full bg-[#181F36] text-white rounded-lg px-3 py-2 focus:outline-none border border-[#232B43] focus:border-[#E100FF] text-sm resize-none"
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={closeEditModal}
-                className="flex-1 py-2 rounded-lg bg-[#232B43] text-white font-semibold hover:bg-[#181F36] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={isSaving}
-                className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${
-                  isSaving 
-                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed' 
-                    : 'bg-[#E100FF] text-white hover:bg-[#c800d6]'
-                }`}
-              >
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-      )}
-
-      {/* Delete User Modal */}
+      {/* Delete Confirmation Modal */}
       {showDeleteModal && deletingUser && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-[#00000020] flex items-center justify-center z-50 p-4">
-          <div className="bg-[#101936] rounded-2xl p-6 max-w-md w-full">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-white">Delete User</h2>
-              <button onClick={closeDeleteModal} className="text-gray-400 hover:text-white">
-                <FaTimes size={20} />
-              </button>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-[#101936] rounded-2xl p-6 sm:p-8 shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                <FaTrash className="text-red-500 text-xl" />
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white">Delete User</h2>
+                <p className="text-gray-400 text-sm">This action cannot be undone.</p>
+              </div>
             </div>
             
-            {message && (
-              <div className={`p-3 rounded-lg text-sm mb-4 ${
-                message.type === 'success' 
-                  ? 'bg-green-500/20 border border-green-500/30 text-green-400' 
-                  : 'bg-red-500/20 border border-red-500/30 text-red-400'
-              }`}>
-                {message.text}
-              </div>
-            )}
-            
-            <div className="text-center mb-6">
-              <div className="flex items-center justify-center mb-4">
-                <img src={deletingUser.profilePicture || "/vercel.svg"} alt={getUserName(deletingUser)} className="w-16 h-16 rounded-full object-cover" />
-              </div>
-              <p className="text-white mb-2">Are you sure you want to delete this user?</p>
-              <p className="text-gray-400 text-sm">{getUserName(deletingUser)} ({deletingUser.email})</p>
-              <p className="text-red-400 text-sm mt-2">This action cannot be undone.</p>
+            <div className="bg-[#181F36] rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-white mb-2">User Details:</h3>
+              <p className="text-gray-300 mb-1"><span className="text-gray-400">Name:</span> {deletingUser.firstName} {deletingUser.lastName}</p>
+              <p className="text-gray-300 mb-1"><span className="text-gray-400">Email:</span> {deletingUser.email}</p>
+              <p className="text-gray-300"><span className="text-gray-400">Role:</span> {deletingUser.role}</p>
             </div>
-            
-            <div className="flex gap-3">
+
+            <div className="flex gap-4">
               <button
                 onClick={closeDeleteModal}
-
-                className="flex-1 py-2 rounded-lg bg-[#232B43] text-white font-semibold hover:bg-[#181F36] transition-colors"
+                disabled={isDeleting}
+                className="flex-1 py-3 rounded-lg bg-[#232B43] text-white font-semibold hover:bg-[#181F36] transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
-
-                onClick={confirmDelete}
+                onClick={handleDeleteUser}
                 disabled={isDeleting}
-                className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${
-                  isDeleting 
-                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed' 
-                    : 'bg-red-500 text-white hover:bg-red-600'
-                }`}
+                className="flex-1 py-3 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {isDeleting ? 'Deleting...' : 'Delete User'}
-
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  'Delete User'
+                )}
               </button>
             </div>
           </div>
